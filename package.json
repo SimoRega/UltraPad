@@ -1,0 +1,23 @@
+{
+  "name": "ultrapad",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimoRega/UltraPad.git"
+  },
+  "author": "SimoRega",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SimoRega/UltraPad/issues"
+  },
+  "homepage": "https://github.com/SimoRega/UltraPad#readme",
+  "devDependencies": {
+    "electron": "^32.0.0"
+  }
+}
