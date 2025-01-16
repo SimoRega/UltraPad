@@ -9,8 +9,10 @@ Gestione delle note personalizzate:
 - Appunti semplici.
 - Checklist.
 - Diario.
+
 Lettura e modifica di file:
 - Supporto per caricamento e modifica di documenti direttamente nell'app.
+
 Account personali:
 - Registrazione e login sicuro tramite email e password.
 - Supporto OAuth2 (es. Google, Facebook, ecc.).
