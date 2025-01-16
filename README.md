@@ -16,32 +16,36 @@ Lettura e modifica di file:
 Account personali:
 - Registrazione e login sicuro tramite email e password.
 - Supporto OAuth2 (es. Google, Facebook, ecc.).
+
 Condivisione:
 - Condividi le note con altri utenti registrati.
 - Sincronizzazione tra dispositivi.
+
 PWA ready (in futuro):
 - Accesso offline e installazione su dispositivi mobili.
+
 Sicurezza:
 - Autenticazione basata su JWT (JSON Web Tokens).
 - Autorizzazione per limitare l'accesso alle risorse.
 ## Stack Tecnologico
 Frontend
-Linguaggio: JavaScript (ES6+)
-Framework: React.js
-Stato globale: Redux Toolkit
-Chiamate API: Axios
-UI Design:
-Tailwind CSS: Per uno stile modulare e moderno.
-Quill.js: Per l'editor avanzato di testo.
+- Linguaggio: JavaScript (ES6+)
+- Framework: React.js
+- Stato globale: Redux Toolkit
+- Chiamate API: Axios
+- UI Design:
+  - Tailwind CSS: Per uno stile modulare e moderno.
+  - Quill.js: Per l'editor avanzato di testo.
+
 Backend
-Linguaggio: Java
-Framework: Spring Boot
-Autenticazione e Sicurezza:
-Spring Security con JWT.
-OAuth2 per login tramite provider esterni.
-Database:
-MongoDB: Database NoSQL flessibile e scalabile.
-Build Tool: Maven
+- Linguaggio: Java
+- Framework: Spring Boot
+- Autenticazione e Sicurezza:
+  - Spring Security con JWT.
+  - OAuth2 per login tramite provider esterni.
+- Database: MongoDB: Database NoSQL flessibile e scalabile.
+- Build Tool: Maven
+
 Integrazioni e Altre Tecnologie
 Service Worker e PWA:
 Workbox (futuro sviluppo).
