@@ -5,21 +5,21 @@ Online Notepad App è un'applicazione web progettata per offrire un'esperienza a
 L'obiettivo principale è fornire uno strumento moderno, semplice da usare, con funzionalità di condivisione avanzate e il supporto per modifiche collaborative.
 
 ## Funzionalità
-+ Gestione delle note personalizzate:
+Gestione delle note personalizzate:
 - Appunti semplici.
 - Checklist.
 - Diario.
-+ Lettura e modifica di file:
+Lettura e modifica di file:
 - Supporto per caricamento e modifica di documenti direttamente nell'app.
-+ Account personali:
+Account personali:
 - Registrazione e login sicuro tramite email e password.
 - Supporto OAuth2 (es. Google, Facebook, ecc.).
-+ Condivisione:
+Condivisione:
 - Condividi le note con altri utenti registrati.
 - Sincronizzazione tra dispositivi.
-+ PWA ready (in futuro):
+PWA ready (in futuro):
 - Accesso offline e installazione su dispositivi mobili.
-+ Sicurezza:
+Sicurezza:
 - Autenticazione basata su JWT (JSON Web Tokens).
 - Autorizzazione per limitare l'accesso alle risorse.
 ## Stack Tecnologico
