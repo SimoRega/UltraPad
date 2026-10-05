@@ -11,8 +11,11 @@ test('three real browser contexts converge, keep offline work, survive reload an
   await Promise.all(pages.map(p=>expect(p.locator('#content')).toHaveValue(/client0😀.*client1😀|client1😀.*client0😀/)));
   const expected=await pages[0].locator('#content').inputValue();expect(await pages[1].locator('#content').inputValue()).toBe(expected);expect(await pages[2].locator('#content').inputValue()).toBe(expected);
   await contexts[1].setOffline(true);
-  await pages[1].evaluate(()=>{ const client=window.testClient as unknown as {ws:WebSocket;doc:CollaborationClient['doc']};client.ws.close();client.doc.getText('content').insert(0,'offline '); });
   await expect(pages[1].locator('#status')).toHaveText('offline');
+  await pages[1].evaluate(async()=>{window.testClient.doc.getText('content').insert(0,'offline ');await window.testClient.settled();});
+  await expect(pages[1].locator('#status')).toHaveText('offline');
+  expect(await pages[1].evaluate(()=>window.testClient.pending)).toBeGreaterThan(0);
+  expect(await pages[0].locator('#content').inputValue()).not.toContain('offline ');
   await pages[0].evaluate(()=>window.testClient.doc.getText('content').insert(0,'online '));
   await contexts[1].setOffline(false);
   await Promise.all(pages.map(p=>expect(p.locator('#content')).toHaveValue(/offline/)));

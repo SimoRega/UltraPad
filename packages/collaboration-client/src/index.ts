@@ -22,6 +22,14 @@ export class CollaborationClient {
     this.writable = canEdit(config.role); this.doc.getText('content');
   }
   private notify(status: SaveStatus, error?: string) { this.status = status; this.config.changed(status, this.outbox.length, this.config.role, error); }
+  private online = () => { if (!this.stopped && !this.blocked) this.schedule(); };
+  private offline = () => {
+    this.authenticated = false; this.synced = false; this.sent.clear(); this.sentAt.clear();
+    clearTimeout(this.authTimer); clearTimeout(this.reconnectTimer); this.ws?.close();
+    if (!this.stopped && !this.blocked) this.notify('offline');
+  };
+  private networkOnline() { return navigator.onLine !== false; }
+  private connected() { return this.networkOnline() && this.ws?.readyState === WebSocket.OPEN; }
   async start() {
     try {
       this.db = await openDB('ultrapad-offline-v1', 1, { upgrade(db) { db.createObjectStore('documents'); db.createObjectStore('metadata'); } });
@@ -33,6 +41,7 @@ export class CollaborationClient {
     if (this.stopped) return;
     this.doc.on('update', this.onUpdate);
     this.awareness.on('update', this.onAwareness);
+    window.addEventListener('offline', this.offline); window.addEventListener('online', this.online);
     this.awareness.setLocalStateField('user', { name: this.config.userId.slice(0, 8), color: '#7c83fd', colorLight: '#7c83fd33' });
     this.ackWatchdog=setInterval(()=>{if([...this.sentAt.values()].some(at=>Date.now()-at>15000))this.ws?.close();},5000);
     this.connect();
@@ -50,20 +59,21 @@ export class CollaborationClient {
     const job = this.queue.then(async () => {
       if (!this.db) throw new Error('INDEXEDDB');
       await this.db.put('documents', value, this.key);
-      this.notify(this.blocked ? 'accesso cambiato' : this.synced && this.authenticated ? (this.outbox.length ? 'sincronizzazione' : 'salvato sul server') : 'offline');
+      this.notify(this.blocked ? 'accesso cambiato' : this.connected() && this.synced && this.authenticated ? (this.outbox.length ? 'sincronizzazione' : 'salvato sul server') : 'offline');
     }).catch(() => { this.persistenceFailed = true; this.notify('errore salvataggio', 'Il dispositivo non ha confermato il salvataggio locale. Esporta una copia.'); });
     this.queue = job; return job;
   }
   private async connect() {
     if (this.stopped || this.blocked) return;
+    if (!this.networkOnline()) { this.notify('offline'); return; }
     try {
       const info = await this.config.ticket();
-      if (this.stopped) return;
+      if (this.stopped || !this.networkOnline()) return;
       if (info.generation !== this.config.generation) { this.block('Il file è stato ripristinato. Le modifiche di questa versione restano esportabili.'); return; }
       const url = new URL(`/ws/${this.config.fileId}/${info.generation}`, this.config.apiUrl); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(url); this.ws = ws; ws.binaryType = 'arraybuffer'; this.authenticated = false; this.synced = false;
       ws.onopen = () => ws.send(pack({ type: 'hello', protocol: 1, ticket: info.ticket }));
-      ws.onmessage = e => { this.incoming = this.incoming.then(() => this.receive(e.data)).catch(() => { this.notify('errore salvataggio', 'Risposta del server non valida.'); ws.close(); }); };
+      ws.onmessage = e => { this.incoming = this.incoming.then(() => { if (!this.stopped && this.ws === ws && this.connected()) return this.receive(e.data); }).catch(() => { this.notify('errore salvataggio', 'Risposta del server non valida.'); ws.close(); }); };
       ws.onclose = () => { if (this.ws !== ws) return; this.authenticated = false; this.synced = false; this.sent.clear(); this.sentAt.clear(); clearTimeout(this.authTimer); this.schedule(); };
       ws.onerror = () => this.notify('offline');
     } catch (e) {
@@ -74,6 +84,7 @@ export class CollaborationClient {
   private schedule() {
     if (this.stopped || this.blocked) return;
     this.notify('offline'); clearTimeout(this.reconnectTimer);
+    if (!this.networkOnline()) return;
     this.reconnectTimer = setTimeout(() => this.connect(), Math.min(30_000, 500 * 2 ** Math.min(this.retry++, 6)) + Math.random() * 500);
   }
   private block(error: string) { this.blocked = true; this.writable = false; this.ws?.close(); this.notify('accesso cambiato', error); }
@@ -139,7 +150,7 @@ export class CollaborationClient {
   }
   private send(header: Header, payload?: Uint8Array) { if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(pack(header, payload)); }
   private flush() {
-    if (!this.synced || !this.authenticated || !this.writable || this.blocked || this.stopped || this.persistenceFailed) return;
+    if (!this.connected() || !this.synced || !this.authenticated || !this.writable || this.blocked || this.stopped || this.persistenceFailed) return;
     for (const pending of this.outbox) {
       if (this.sent.has(pending.id)) continue;
       this.sent.add(pending.id); this.sentAt.set(pending.id,Date.now());
@@ -158,6 +169,7 @@ export class CollaborationClient {
   async settled() { await this.queue; }
   async destroy() {
     this.stopped = true; clearInterval(this.ackWatchdog); clearTimeout(this.authTimer); clearTimeout(this.reconnectTimer); clearTimeout(this.awarenessTimer);
+    window.removeEventListener('offline', this.offline); window.removeEventListener('online', this.online);
     this.doc.off('update', this.onUpdate); this.awareness.off('update', this.onAwareness); this.ws?.close();
     await this.queue; this.awareness.destroy(); this.doc.destroy(); this.db?.close();
   }
