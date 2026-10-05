@@ -67,3 +67,26 @@ describe('real workerd SQLite storage and WebSocket protocol (test ACL adapter)'
   const wait=next(ws);ws.send(pack({type:'refresh-auth',ticket}));expect((await wait).header.code).toBe('TICKET_EXPIRED');ws.close();
  });
 });
+
+describe('v1.2 formatted documents in native durable storage',()=>{
+ it('commits rich attributes, checkpoints them and restores styles to a new generation',async()=>{
+  const {stub,ws}=await connect();const doc=new Y.Doc();doc.getText('content').insert(0,'Styled',{bold:true,font:'Arial',size:'24pt'});doc.getText('content').insert(6,'\n',{align:'center',paragraphBorder:'all'});
+  expect((await update(ws,doc)).result.header.type).toBe('ack');
+  const cp=await (await stub.fetch(new Request('https://room/checkpoints',{method:'POST',body:JSON.stringify({label:'styles'})}))).json() as {id:string};
+  await evictDurableObject(stub);const snapshot=await (await stub.fetch('https://room/snapshot')).json() as {delta:unknown[]};expect(snapshot.delta).toEqual(doc.getText('content').toDelta());
+  const recovered=new Y.Doc();Y.applyUpdate(recovered,new Uint8Array(await (await stub.fetch(`https://room/checkpoints/${cp.id}`)).arrayBuffer()));expect(recovered.getText('content').toDelta()).toEqual(snapshot.delta);
+  const restored=binding.get(binding.newUniqueId());const seeded=await restored.fetch(new Request('https://room/seed',{method:'POST',body:JSON.stringify({fileId,generation:2,delta:snapshot.delta,text:'Styled\n',operationId:crypto.randomUUID()})}));expect(seeded.status).toBe(200);
+  const result=await (await restored.fetch('https://room/snapshot')).json() as {delta:unknown[]};expect(result.delta).toEqual(snapshot.delta);ws.close();doc.destroy();recovered.destroy();
+ });
+ it('prepares an existing TXT once, while a viewer cannot modify it',async()=>{
+  const {stub,ws}=await connect();const doc=new Y.Doc();doc.getText('content').insert(0,'legacy');await update(ws,doc);
+  const ticket=async(token:string)=>(await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify({token,fileId,generation:1,document:true})}))).json();
+  await ticket('viewer');let snapshot=await (await stub.fetch('https://room/snapshot')).json() as {text:string;serverSeq:number};expect(snapshot.text).toBe('legacy');
+  await ticket('editor');await ticket('editor');snapshot=await (await stub.fetch('https://room/snapshot')).json() as {text:string;serverSeq:number};expect(snapshot.text).toBe('legacy\n');expect(snapshot.serverSeq).toBe(2);
+  ws.close();await evictDurableObject(stub);expect((await (await stub.fetch('https://room/snapshot')).json() as {text:string}).text).toBe('legacy\n');doc.destroy();
+ });
+ it('rejects malicious rich attributes without committing a new sequence',async()=>{
+  const {stub,ws}=await connect();const doc=new Y.Doc();doc.getText('content').insert(0,'bad',{link:'javascript:alert(1)'});expect((await update(ws,doc)).result.header.type).toBe('error');
+  expect((await (await stub.fetch('https://room/snapshot')).json() as {serverSeq:number}).serverSeq).toBe(0);ws.close();doc.destroy();
+ });
+});

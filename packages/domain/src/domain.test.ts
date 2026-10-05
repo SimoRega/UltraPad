@@ -17,11 +17,11 @@ describe('domain boundaries', () => {
     Y.applyUpdate(b,updates[1]); Y.applyUpdate(b,updates[0]); Y.applyUpdate(b,updates[1]);
     expect(b.getText('content').toString()).toBe(a.getText('content').toString()); a.destroy(); b.destroy();
   });
-  it('rejects writes to other shared types, embeds, attributes and oversized text', () => {
+  it('rejects writes to other shared types, embeds, unapproved attributes and oversized text', () => {
     const base = new Y.Doc();
     const wrong = new Y.Doc(); wrong.getMap('permissions').set('role','owner'); expect(() => candidate(base,Y.encodeStateAsUpdate(wrong))).toThrow('SCHEMA');
     const embedded = new Y.Doc(); embedded.getText('content').insertEmbed(0,{ script:'bad' }); expect(() => candidate(base,Y.encodeStateAsUpdate(embedded))).toThrow('SCHEMA');
-    const formatted = new Y.Doc(); formatted.getText('content').insert(0,'text',{ bold:true }); expect(() => candidate(base,Y.encodeStateAsUpdate(formatted))).toThrow('SCHEMA');
+    const formatted = new Y.Doc(); formatted.getText('content').insert(0,'text',{ onclick:'alert(1)' }); expect(() => candidate(base,Y.encodeStateAsUpdate(formatted))).toThrow('SCHEMA');
     const large = new Y.Doc(); large.getText('content').insert(0,'x'.repeat(limits.text+1)); expect(() => candidate(base,Y.encodeStateAsUpdate(large))).toThrow('QUOTA');
     expect(base.getText('content').toString()).toBe(''); [base,wrong,embedded,formatted,large].forEach(d=>d.destroy());
   });

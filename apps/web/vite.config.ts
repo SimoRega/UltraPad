@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const variables=loadEnv(mode,root);
   const target=developmentTarget(variables.VITE_API_URL ?? 'http://127.0.0.1:8787');
   return {
-    root: resolve(import.meta.dirname), envDir: root,
+    root: resolve(import.meta.dirname), envDir: root, cacheDir: resolve(root,'node_modules/.vite/web'),
     plugins: [react()],
     resolve: { alias: { 'monaco-editor/esm/vs/editor/editor.api.js': 'monaco-editor/editor/editor.api.js' } },
     server: {
@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
         }
       } } : undefined
     },
-    optimizeDeps: { include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react-router-dom', '@tanstack/react-query', '@supabase/supabase-js', 'yjs', 'y-protocols/awareness', 'idb', 'jszip'], exclude: ['monaco-editor', 'y-monaco'], noDiscovery: false },
+    optimizeDeps: { include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react-router-dom', '@tanstack/react-query', '@supabase/supabase-js', 'yjs', 'y-protocols/awareness', 'idb', 'jszip', 'quill', 'quill-cursors'], exclude: ['monaco-editor', 'y-monaco', 'y-quill'], noDiscovery: false },
     build: { outDir: 'dist', chunkSizeWarningLimit: 4500 },
     define: { __BUILD_MODE__: JSON.stringify(mode), __CONFIGURED__: JSON.stringify(Boolean(variables.VITE_SUPABASE_URL)) }
   };

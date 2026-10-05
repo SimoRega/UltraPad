@@ -43,3 +43,7 @@ L'unico percorso di modifica è update, incluso l'assemblaggio dei chunk.
 Outbox persistita prima dell'invio, eliminata solo dopo ACK di ID/generazione.
 A parità di ID l'attore e l'hash dei bytes devono coincidere. L'ACK indica
 commit SQLite, non completamento della copia Storage o backup indipendente.
+
+## Estensioni v1.2
+
+GET /v1/dashboard accetta workspace_id UUID e filtra sotto RLS prima del limite. POST /v1/files/:id/collaboration-ticket accetta {document:true} solo per TXT: prepara newline finale sotto ACL di scrittura. Snapshot/preview aggiungono delta (insert string, attributi tipografici validati). Restore/copia conservano il delta; protocollo binario versione 1 invariato. Vedere ADR/0004-v12-documents.md.

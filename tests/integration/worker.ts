@@ -28,8 +28,8 @@ export default { async fetch(request: Request, env: Env) {
  } else if(/^\/v1\/projects\/.*\/files$/.test(url.pathname)) {
   result=Response.json([{id:'30000000-0000-4000-8000-000000000001',project_id:'20000000-0000-4000-8000-000000000001',workspace_id:'10000000-0000-4000-8000-000000000001',name:'idee.md',kind:'text',parent_id:null,generation:1,language:'markdown',metadata_version:1,status:'ready'}]);
  } else if(/^\/v1\/files\/.*\/collaboration-ticket$/.test(url.pathname)) {
-  const fileId=url.pathname.split('/')[3];const stub=env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`));
-  result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify({fileId,generation:1,token:'editor'})}));
+  const options=await request.json<{document?:boolean}>();const fileId=url.pathname.split('/')[3];const stub=env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`));
+  result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify({fileId,generation:1,token:'editor',document:options.document})}));
  } else if(url.pathname.startsWith('/ws/')) {
   const [, , fileId, generation]=url.pathname.split('/');
   return env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:${generation}`)).fetch(new Request('https://room/ws',{headers:request.headers}));

@@ -1,3 +1,4 @@
+import { validateRichDelta, type RichOp } from '../../../packages/rich-text/src/index';
 import { publishCheckpoint } from './backup';
 import { DurableObject } from 'cloudflare:workers';
 import * as Y from 'yjs';
@@ -5,7 +6,7 @@ import { access, database, type Env } from '../../api/src/db';
 import { canEdit, candidate, limits, sha256, type Role } from '../../../packages/domain/src/index';
 import { chunks, frameHeader, join, pack, unpack, type Header } from '../../../packages/contracts/src/index';
 type Lease = { token: string; userId: string; role: Role; fileId: string; generation: number; expiresAt: number; sessionId: string; window: number; count: number };
-type Ticket = { token: string; fileId: string; generation: number };
+type Ticket = { token: string; fileId: string; generation: number; document?:boolean };
 export class DocumentRoom extends DurableObject<Env> {
   private doc = new Y.Doc();
   private serial: Promise<unknown> = Promise.resolve();
@@ -34,6 +35,13 @@ export class DocumentRoom extends DurableObject<Env> {
     const {error}=await database(this.env,token).rpc('record_file_activity',{fid:fileId,gen:generation,seq});
     if(error)throw new Error('ACTIVITY_INDEX_FAILED');
   }
+  private async prepareDocument(data:Ticket) {
+    const draft=new Y.Doc();Y.applyUpdate(draft,Y.encodeStateAsUpdate(this.doc));const before=Y.encodeStateVector(draft);draft.getText('content').insert(draft.getText('content').length,'\n',{});
+    const update=Y.encodeStateAsUpdate(draft,before);const next=candidate(this.doc,update);draft.destroy();const seq=this.seq+1;
+    let committing=false;try{await this.reserveCapacity(data.token,this.fileId,this.generation,Y.encodeStateAsUpdate(next).length);committing=true;this.ctx.storage.transactionSync(()=>{this.ctx.storage.sql.exec('UPDATE meta SET seq=?,snapshot=? WHERE id=1',seq,Y.encodeStateAsUpdate(next).buffer);});await this.ctx.storage.sync();}catch(e){next.destroy();if(committing)this.ctx.abort('STORAGE_SYNC_FAILED');throw e;}
+    this.doc.destroy();this.doc=next;this.seq=seq;this.ctx.waitUntil(this.reportActivity(data.token,this.fileId,this.generation,seq).catch(()=>undefined));
+    const parts=chunks(update);const transferId=crypto.randomUUID();parts.forEach((part,index)=>this.broadcast({type:'remote-update',transferId,part:index,total:parts.length,serverSeq:seq},part));
+  }
   private enqueue<T>(work: () => Promise<T>): Promise<T> {
     const next = this.serial.then(work, work); this.serial = next.catch(() => undefined); return next;
   }
@@ -48,8 +56,9 @@ export class DocumentRoom extends DurableObject<Env> {
     return this.enqueue(async () => {
       const url = new URL(request.url);
       if (url.pathname === '/ticket') {
-        const data = await request.json<Ticket>(); await this.authorize(data.token, data.fileId, data.generation);
+        const data = await request.json<Ticket>();const authorization=await this.authorize(data.token, data.fileId, data.generation);
         this.initialize(data.fileId, data.generation);
+        if(data.document&&canEdit(authorization.role)&&!this.doc.getText('content').toString().endsWith('\n'))await this.prepareDocument(data);
         const ticket = crypto.randomUUID() + crypto.randomUUID();
         this.ctx.storage.sql.exec('INSERT INTO tickets VALUES(?,?,?)', ticket, JSON.stringify(data), Date.now() + 30_000);
         await this.ctx.storage.setAlarm(Date.now() + 45_000);
@@ -63,7 +72,7 @@ export class DocumentRoom extends DurableObject<Env> {
         return new Response(null, { status: 101, webSocket: pair[0] });
       }
       if (url.pathname === '/backup-health') return Response.json(this.ctx.storage.sql.exec('SELECT * FROM backup_state').one());
-      if (url.pathname === '/snapshot') return Response.json({ text: this.doc.getText('content').toString(), generation: this.generation, serverSeq: this.seq, payload: [...Y.encodeStateAsUpdate(this.doc)] });
+      if (url.pathname === '/snapshot') return Response.json({ text: this.doc.getText('content').toString(), generation: this.generation, serverSeq: this.seq, delta:this.doc.getText('content').toDelta(), payload: [...Y.encodeStateAsUpdate(this.doc)] });
       if (url.pathname === '/checkpoints' && request.method === 'GET') return Response.json(this.ctx.storage.sql.exec('SELECT id,label,seq,generation,hash,created FROM checkpoints ORDER BY created DESC').toArray());
       if (url.pathname === '/checkpoints' && request.method === 'POST') {
         const { label, id } = await request.json<{ label: string; id?: string }>();
@@ -88,12 +97,12 @@ export class DocumentRoom extends DurableObject<Env> {
         return new Response(row.blob, { headers: { 'X-Checksum': row.hash, 'X-Server-Seq': String(row.seq), 'X-Generation': String(row.generation) } });
       }
       if (url.pathname === '/seed') {
-        const { fileId, generation, text, operationId } = await request.json<{ fileId: string; generation: number; text: string; operationId: string }>();
+        const { fileId, generation, text, delta, operationId } = await request.json<{ fileId: string; generation: number; text: string; delta?:RichOp[]; operationId: string }>();
         this.initialize(fileId, generation);
         const seeded = this.ctx.storage.sql.exec<{ seed_id: string | null }>('SELECT seed_id FROM meta').one().seed_id;
         if (seeded && seeded !== operationId) throw new Error('SEED_CONFLICT');
         if (!seeded) {
-          const fresh = new Y.Doc(); fresh.getText('content').insert(0, text);
+          const fresh = new Y.Doc();if(delta)fresh.getText('content').applyDelta(validateRichDelta(delta));else fresh.getText('content').insert(0, text);
           const next = candidate(new Y.Doc(), Y.encodeStateAsUpdate(fresh)); fresh.destroy();
           this.ctx.storage.sql.exec('UPDATE meta SET snapshot=?,seed_id=? WHERE id=1', Y.encodeStateAsUpdate(next).buffer, operationId);
           this.doc.destroy(); this.doc = next;

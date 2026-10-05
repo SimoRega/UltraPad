@@ -10,7 +10,12 @@ importanti. Account esterni e deploy non sono stati eseguiti automaticamente.
 
 ## Funzioni implementate
 
-Versione 1.1: [novità e aggiornamento](docs/V1_1.md).
+Versione 1.2: [novità e aggiornamento](docs/V1_2.md).
+
+- Dialog per file/temi e panoramica dedicata per ogni workspace.
+- Palette pastello, sfondo gradient glass animato e astratto statico.
+- Editor visuale TXT: tipografia, paragrafi, liste, stili e pennello; stili condivisi e versionati.
+- Export HTML e documento UltraPad reimportabile con formattazione.
 
 - Home a tutto schermo con lavori recenti, modifiche del team e gruppi per tema.
 - File singoli privati nel DB; temporanei della scheda esportabili e salvabili nel DB.
@@ -28,7 +33,7 @@ Versione 1.1: [novità e aggiornamento](docs/V1_1.md).
 - Quote server: 1 MiB testo, 8 MiB stato CRDT, 64 KiB frame, 500 file/progetto,
   10 editor/room, prenotazioni conservative di 100 MiB per workspace.
 
-DOC/DOCX/RTF, allegati, lavagna, editor rich text, commenti, esecuzione
+DOC/DOCX/RTF, allegati, lavagna, commenti, esecuzione
 Java/C#/Python/JS e compilazione LaTeX richiedono le milestone successive.
 Java, C# e TEX sono modificabili come **sorgente testuale**, non eseguibili.
 

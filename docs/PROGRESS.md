@@ -27,12 +27,12 @@ un deploy da questa sessione**. L'SDD completo è conservato in `docs/SDD.md`.
 | Verifica | Esito |
 |---|---|
 | TypeScript strict e lint | Passati |
-| Test dominio/protocollo, presentazione + PostgreSQL PGlite | 13 passati |
-| Test workerd/SQLite/Durable Objects | 14 passati |
-| Playwright Chromium | 18 passati |
+| Test dominio/protocollo, presentazione + PostgreSQL PGlite | 16 passati |
+| Test workerd/SQLite/Durable Objects | 17 passati |
+| Playwright Chromium | 25 passati |
 | Setup locale Node | 3 passati |
 | Build frontend + dry run Worker | Passati |
-| Audit dipendenze | Nessun advisory rilevato al controllo |
+| Audit dipendenze produzione v1.2 | 1 advisory low di Quill sull’export HTML; funzione vulnerabile esclusa, export validato indipendente (vedere DEPENDENCIES.md) |
 
 I test PostgreSQL applicano le tre migrazioni con fixture Auth/Storage e
 verificano permessi, inviti, revoca, quote e Storage privato. Non sono una
@@ -77,7 +77,7 @@ di rete Node, non incluso nel prodotto o nella CI.
   oltre ai flussi membri e ruoli disponibili.
 - Automazione operativa del backup e disaster restore sopra descritti.
 
-M4–M8 restano successive come richiesto dall'SDD: editor rich text,
+La v1.2 anticipa l'editor rich text TXT (ADR 0004). Restano successive:
 commenti, lavagna, runner isolati, compilazione LaTeX, Office/RTF e relative
 policy/licenze. Java/C#/TEX sono ora sorgenti testuali, senza esecuzione.
 Non attivare queste milestone per aggirare i gate R1.
@@ -176,3 +176,30 @@ viewer read-only, JSON e mobile senza overflow. SQL verifica privacy,
 provisioning atomico e rollback, temi, sequence/generation e blocco bypass
 condivisione. Le fixture non certificano la migrazione nel progetto remoto:
 il proprietario deve applicare 004 prima di usare questa release.
+
+## v1.2 — Documenti visuali e navigazione
+
+Richiesta successiva al riscontro dell'utente che v1 è operativa. Dialog modali
+per file, etichette e conferme; home globale separata dai workspace con filtro
+prima del limite. Palette pastello, gradient glass animato e astratto statico,
+con reduced motion e migrazione delle preferenze locali.
+
+TXT visuali con Quill/y-quill sullo stesso Y.Text/provider, toolbar Testo,
+Paragrafo e Stili, pennello e undo. Font/dimensioni, enfasi, colori,
+apice/pedice/maiuscole, allineamenti, liste multilivello, rientri/interlinea,
+spaziatura/sfondo/bordi. Schema attributi whitelist: no embed o HTML arbitrario.
+Preparazione newline server autorizzata una sola volta; cache rich offline.
+Checkpoint/copia/restore mantengono stili; export HTML e documento nativo
+reimportabile, sidecar ZIP v2 con hash e recupero locale formattato.
+
+ADR 0004 aggiorna lo scope rich text; Office/runner/allegati ancora successivi.
+Nessuna migrazione SQL dalla 1.1. Aggiornare frontend e Worker insieme e
+conservare le variabili configurate: docs/V1_2.md. Nessun deploy remoto o
+nuova verifica dell'OAuth reale effettuata dalla sessione v1.2.
+
+Verifica locale v1.2: typecheck/lint, build frontend e Worker dry run,
+16 unità/PGlite, 17 workerd, 25 browser e 3 setup: 61 test passati.
+Browser include typography/pennello/lista/zero spacing, stili condivisi,
+offline, viewer, import nativo/promozione, reload e vista sorgente.
+Cache Vite separate tra app e harness evitano invalidazione incrociata dei
+moduli lazy. Nessuna configurazione di test entra in produzione.

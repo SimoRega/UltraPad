@@ -90,11 +90,11 @@ test('temporary files use format tools, survive reload and never send content to
 test('appearance switches both page and Monaco, custom accent persists across reload',async({page})=>{
  await signedIn(page);await page.goto('/projects/20000000-0000-4000-8000-000000000001/files/30000000-0000-4000-8000-000000000001');
  await expect(page.getByRole('status')).toHaveText('salvato sul server');await page.getByRole('button',{name:'Aspetto',exact:true}).click();
- await page.getByRole('button',{name:'☀ Bianco',exact:true}).click();await page.getByRole('button',{name:'Colore #00836b',exact:true}).click();
+ await page.getByRole('button',{name:'☀ Bianco',exact:true}).click();await page.getByRole('button',{name:'Colore #a5d9ca',exact:true}).click();
  await page.getByRole('button',{name:'Chiudi',exact:true}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','light');
  await expect(page.locator('.monaco-editor').first()).toHaveCSS('background-color','rgb(255, 255, 255)');
  await page.reload();await expect(page.locator('html')).toHaveAttribute('data-theme','light');
- expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#00836b');
+ expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toBe('#a5d9ca');
  await page.getByRole('button',{name:'UltraPad',exact:true}).click();await page.screenshot({path:'test-results/v11-home-light.png',fullPage:true});
 });
 test('source toolbar edits go through collaborative persistence and undo',async({page})=>{

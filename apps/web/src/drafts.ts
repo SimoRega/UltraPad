@@ -1,4 +1,5 @@
-export type Draft={id:string;name:string;text:string;updated:number};
+import type { RichOp } from '../../../packages/rich-text/src/index';
+export type Draft={id:string;name:string;text:string;delta?:RichOp[];updated:number};
 const key=(user:string)=>`ultrapad-drafts:${user}`;
 export function readDrafts(user:string):Draft[]{try{const rows:unknown=JSON.parse(sessionStorage.getItem(key(user))??'[]');return Array.isArray(rows)?rows.filter((d):d is Draft=>d && typeof d.id==='string' && typeof d.name==='string' && typeof d.text==='string' && typeof d.updated==='number'):[];}catch{return [];}}
 export function writeDrafts(user:string,rows:Draft[]){sessionStorage.setItem(key(user),JSON.stringify(rows));}

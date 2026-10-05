@@ -46,3 +46,9 @@ e non costituisce audit affidabile. Temporanei isolati per account in
 sessionStorage, con limiti e segnalazione degli errori; scaricare prima di
 chiudere. Gli strumenti inseriscono solo testo: niente esecuzione HTML o
 linguaggi, e niente credenziali aggiuntive.
+
+## Documenti visuali v1.2
+
+Attributi Y.Text ammessi soltanto dalla whitelist condivisa, con valori e limiti enumerati. Nessun embed/link/HTML/CSS arbitrario; incolla solo testo e drop disabilitato. HTML di export escapa testo e titolo; gli stili provengono dalla whitelist. Import nativo valida schema/nome/quote. Preparazione TXT via ticket rich soltanto per editor autorizzati; viewer non causa scritture. Cache/outbox/checkpoint contengono testo e stili sotto le stesse ACL già presenti.
+
+Advisory Quill GHSA-v3m3-f69x-jf25 (low, export HTML): export Quill non usato; renderer indipendente con escaping e whitelist, coperto da test. Monitorare una release corretta; audit rimane visibile.

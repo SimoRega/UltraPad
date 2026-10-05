@@ -10,6 +10,9 @@ Versioni effettive in package.json e pnpm-lock.yaml. Installazione congelata in 
 | idb | 8.0.3 |
 | jszip | 3.10.2 |
 | monaco-editor | 0.57.0 |
+| quill | 2.0.3 |
+| y-quill | 1.0.0 |
+| quill-cursors | 4.0.4 |
 | react | 19.3.0 |
 | react-dom | 19.3.0 |
 | react-router-dom | 7.18.4 |
@@ -37,3 +40,9 @@ React, Vite, Hono, Supabase JS, TanStack Query, Monaco, y-monaco, Yjs/y-protocol
 - https://github.com/yjs/y-monaco
 
 Queste fonti sono state verificate durante implementazione. Le versioni sono state poi validate con installazione, typecheck, build e test reali locali; nessuna quota remota è stata certificata.
+
+Editor visuale: Quill (BSD-3-Clause), y-quill e quill-cursors (MIT). Versione cursori 4.0.4 compatibile con il peer di y-quill. Riferimenti: https://quilljs.com/docs/api e https://github.com/yjs/y-quill.
+
+## Audit produzione v1.2
+
+`pnpm audit --prod` rileva 1 advisory low su Quill 2.0.3: GHSA-v3m3-f69x-jf25 / CVE-2025-15056, export HTML, nessuna versione corretta indicata dall’advisory al controllo. UltraPad non chiama `getSemanticHTML()` e non usa l’export HTML di Quill: `richHtml()` valida il delta, limita gli attributi ed escapa titolo/testo. Test di regressione includono payload HTML/eseguibili. Non ignorare globalmente l’advisory; monitorare aggiornamenti. Riferimento: https://github.com/advisories/GHSA-v3m3-f69x-jf25.

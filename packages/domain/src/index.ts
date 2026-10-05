@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { validAttributes } from '../../rich-text/src/index';
 export const roles = ['viewer', 'commenter', 'editor', 'admin', 'owner'] as const;
 export type Role = typeof roles[number];
 export const canEdit = (r: Role) => roles.indexOf(r) >= 2;
@@ -22,7 +23,7 @@ export function candidate(current: Y.Doc, update: Uint8Array): Y.Doc {
     Y.applyUpdate(next, Y.encodeStateAsUpdate(current)); Y.applyUpdate(next, update);
     const text = next.getText('content');
     if ([...next.share.keys()].some(k => k !== 'content')) throw new Error('SCHEMA');
-    if (text.toDelta().some((d: { insert?: unknown; attributes?: Record<string, unknown> }) => typeof d.insert !== 'string' || (d.attributes && Object.keys(d.attributes).length))) throw new Error('SCHEMA');
+    if (text.toDelta().some((d: { insert?: unknown; attributes?: Record<string, unknown> }) => typeof d.insert !== 'string' || (d.attributes && !validAttributes(d.attributes)))) throw new Error('SCHEMA');
     if (new TextEncoder().encode(text.toString()).byteLength > limits.text || Y.encodeStateAsUpdate(next).byteLength > limits.state) throw new Error('QUOTA');
     return next;
   } catch (e) { next.destroy(); throw e; }

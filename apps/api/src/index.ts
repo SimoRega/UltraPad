@@ -44,7 +44,8 @@ app.get('/v1/projects/:id/members', async c => {
   if (error) throw new Error('DATABASE_ERROR'); return c.json(data);
 });
 app.get('/v1/dashboard', async c => {
-  const {data,error}=await database(c.env,c.get('token')).from('files').select('*').eq('kind','text').order('updated_at',{ascending:false}).limit(100);
+  let query=database(c.env,c.get('token')).from('files').select('*').eq('kind','text');const workspace=c.req.query('workspace_id');if(workspace)query=query.eq('workspace_id',id.parse(workspace));
+  const {data,error}=await query.order('updated_at',{ascending:false}).limit(100);
   if(error)throw new Error('DATABASE_ERROR');return c.json(data);
 });
 const operation = z.enum(['create_standalone','set_theme','create_workspace','delete_workspace','create_project','delete_project','create_file','rename_file','move_file','delete_file','set_member']);
@@ -73,7 +74,8 @@ app.post('/v1/invitations/accept', async c => {
 });
 app.post('/v1/files/:id/collaboration-ticket', async c => {
   const fileId = id.parse(c.req.param('id')); const auth = await access(c.env, c.get('token'), fileId);
-  return room(c.env, fileId, auth.file.generation).fetch(new Request('https://room/ticket', { method: 'POST', body: JSON.stringify({ token: c.get('token'), fileId, generation: auth.file.generation }) }));
+  const options=z.object({document:z.boolean().optional()}).parse(await c.req.json());if(options.document&&!/\.txt$/i.test(auth.file.name))return c.json({error:'DOCUMENT_TYPE_REQUIRED'},400);
+  return room(c.env, fileId, auth.file.generation).fetch(new Request('https://room/ticket', { method: 'POST', body: JSON.stringify({ token: c.get('token'), fileId, generation: auth.file.generation,document:options.document }) }));
 });
 app.get('/v1/files/:id/snapshot', async c => {
   const fileId = id.parse(c.req.param('id')); const { file } = await access(c.env, c.get('token'), fileId);
@@ -104,7 +106,7 @@ app.get('/v1/files/:id/checkpoints/:checkpoint', async c => {
   const fileId = id.parse(c.req.param('id')); const { file } = await access(c.env, c.get('token'), fileId);
   const bytes=await checkpointBytes(c.env,database(c.env,c.get('token')),fileId,file.generation,id.parse(c.req.param('checkpoint')));
   const doc = new Y.Doc(); Y.applyUpdate(doc, bytes);
-  const text = doc.getText('content').toString(); doc.destroy(); return c.json({ text });
+  const text = doc.getText('content').toString();const delta=doc.getText('content').toDelta(); doc.destroy(); return c.json({ text,delta });
 });
 app.get('/v1/files/:id/checkpoints/:checkpoint/raw',async c=>{
   const fileId=id.parse(c.req.param('id'));const {file}=await access(c.env,c.get('token'),fileId);
@@ -128,8 +130,8 @@ app.post('/v1/files/:id/restore', async c => {
   const safety = await oldRoom.fetch(new Request('https://room/checkpoints', { method: 'POST', body: JSON.stringify({ label: 'Prima del ripristino', id: args.operation_id }) }));
   if (!safety.ok) throw new Error('RESTORE_SAFETY_FAILED');
   const doc = new Y.Doc(); Y.applyUpdate(doc, selected);
-  const text = doc.getText('content').toString(); doc.destroy();
-  const seeded = await room(c.env, fileId, locked.pending_generation).fetch(new Request('https://room/seed', { method: 'POST', body: JSON.stringify({ fileId, generation: locked.pending_generation, text, operationId: args.operation_id }) }));
+  const text = doc.getText('content').toString();const delta=doc.getText('content').toDelta(); doc.destroy();
+  const seeded = await room(c.env, fileId, locked.pending_generation).fetch(new Request('https://room/seed', { method: 'POST', body: JSON.stringify({ fileId, generation: locked.pending_generation, text, delta, operationId: args.operation_id }) }));
   if (!seeded.ok) throw new Error('RESTORE_SEED_FAILED');
   const completed = await db.rpc('mutate', { op: 'finish_restore', args: { ...args, id: fileId } });
   if (completed.error) throw new Error(completed.error.message); return c.json(completed.data);
