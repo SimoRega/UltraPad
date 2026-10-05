@@ -1,23 +1,56 @@
 {
   "name": "ultrapad",
-  "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-	"start": "electron ."
+    "dev": "concurrently -k 'pnpm dev:api' 'pnpm dev:web'",
+    "dev:web": "vite --config apps/web/vite.config.ts",
+    "dev:api": "wrangler dev --config apps/api/wrangler.jsonc",
+    "build": "pnpm build:web && pnpm build:api",
+    "build:web": "vite build --config apps/web/vite.config.ts",
+    "build:api": "wrangler deploy --dry-run --config apps/api/wrangler.jsonc --outdir dist/api",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:rls": "node scripts/test-rls.mjs",
+    "deploy:api": "wrangler deploy --config apps/api/wrangler.jsonc",
+    "deploy:web": "wrangler pages deploy apps/web/dist --project-name ultrapad",
+    "doctor": "node scripts/doctor.mjs"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SimoRega/UltraPad.git"
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "@tanstack/react-query": "5.104.1",
+    "hono": "4.13.13",
+    "idb": "8.0.3",
+    "jszip": "3.10.2",
+    "monaco-editor": "0.57.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "y-monaco": "0.1.6",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33",
+    "zod": "4.6.5"
   },
-  "author": "SimoRega",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/SimoRega/UltraPad/issues"
-  },
-  "homepage": "https://github.com/SimoRega/UltraPad#readme",
   "devDependencies": {
-    "electron": "^32.0.0"
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/workers-types": "5.20261004.1",
+    "@electric-sql/pglite": "0.5.8",
+    "@playwright/test": "1.55.1",
+    "@types/node": "24.6.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "9.2.1",
+    "eslint": "10.12.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.0",
+    "vite": "8.3.2",
+    "vitest": "4.1.11",
+    "wrangler": "4.147.0"
   }
 }

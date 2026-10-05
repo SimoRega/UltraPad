@@ -1,79 +1,65 @@
 # UltraPad
-## Descrizione
-UltraPad è un'applicazione web progettata per offrire un'esperienza avanzata nella gestione di note, checklist, diari e documenti. Ideale per studenti, lavoratori e utenti casuali, la piattaforma consente di creare, visualizzare, modificare e condividere note in qualsiasi momento e da qualsiasi dispositivo.
 
-L'obiettivo principale è fornire uno strumento moderno, semplice da usare, con funzionalità di condivisione avanzate e il supporto per modifiche collaborative.
+Web app collaborativa per note e codice, implementata a partire dall'SDD
+Atelier Collaborativo. Questo repository sostituisce il prototipo Electron.
+La cronologia Git precedente è conservata.
 
-## Funzionalità
-Gestione delle note personalizzate:
-- Appunti semplici.
-- Checklist.
-- Diario.
+**Stato: implementazione R1 da validare in staging, non beta certificata.**
+Leggere [progressi e gate aperti](docs/PROGRESS.md) prima di affidarle dati
+importanti. Account esterni e deploy non sono stati eseguiti automaticamente.
 
-Lettura e modifica di file:
-- Supporto per caricamento e modifica di documenti direttamente nell'app.
+## Funzioni implementate
 
-Account personali:
-- Registrazione e login sicuro tramite email e password.
-- Supporto OAuth2 (es. Google, Facebook, ecc.).
+- OAuth GitHub tramite Supabase, workspace, progetti, cartelle e file.
+- Monaco con linguaggi testuali, ricerca, word wrap, tab, download.
+- Yjs condiviso su WebSocket, cursori/presenza, ACK dopo commit SQLite.
+- Ruoli, RLS, inviti monouso legati all'email verificata, revoca e lease.
+- IndexedDB/outbox per file già aperti, reconnect, recupero ed export locale.
+- Checkpoint manuali, preview, copia e restore con nuova generazione.
+- Checkpoint privati Supabase, copie automatiche ogni 15 minuti se configurate.
+- Import UTF-8/UTF-16 BOM, export UTF-8 LF e ZIP con hash e manifesto.
+- Quote server: 1 MiB testo, 8 MiB stato CRDT, 64 KiB frame, 500 file/progetto,
+  10 editor/room, prenotazioni conservative di 100 MiB per workspace.
 
-Condivisione:
-- Condividi le note con altri utenti registrati.
-- Sincronizzazione tra dispositivi.
+DOC/DOCX/RTF, allegati, lavagna, editor rich text, commenti, esecuzione
+Java/C#/Python/JS e compilazione LaTeX richiedono le milestone successive.
+Java, C# e TEX sono modificabili come **sorgente testuale**, non eseguibili.
 
-PWA ready (in futuro):
-- Accesso offline e installazione su dispositivi mobili.
+## Avvio
 
-Sicurezza:
-- Autenticazione basata su JWT (JSON Web Tokens).
-- Autorizzazione per limitare l'accesso alle risorse.
-## Stack Tecnologico
-Frontend
-- Linguaggio: JavaScript (ES6+)
-- Framework: React.js
-- Stato globale: Redux Toolkit
-- Chiamate API: Axios
-- UI Design:
-  - Tailwind CSS: Per uno stile modulare e moderno.
-  - Quill.js: Per l'editor avanzato di testo.
+Node 24 e pnpm 11.25.0. Serve un progetto Supabase development/staging.
 
-Backend
-- Linguaggio: Java
-- Framework: Spring Boot
-- Autenticazione e Sicurezza:
-  - Spring Security con JWT.
-  - OAuth2 per login tramite provider esterni.
-- Database: MongoDB: Database NoSQL flessibile e scalabile.
-- Build Tool: Maven
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env
+cp apps/api/.dev.vars.example apps/api/.dev.vars
+# Configurare variabili e applicare le migrazioni; vedere docs/DEPLOY.md.
+pnpm doctor
+pnpm dev
+```
 
-Integrazioni e Altre Tecnologie
-- Service Worker e PWA: Workbox (futuro sviluppo).
-- Test:
-    - Backend: JUnit e Mockito per test unitari e di integrazione.
-    - Frontend: Jest e React Testing Library per test sui componenti React.
-    - End-to-End (E2E): Cypress.
+Frontend: http://localhost:5173 — API locale: http://localhost:8787.
+In assenza di configurazione il frontend mostra istruzioni; non simula utenti.
 
-## Requisiti di sistema
-- Backend:
-    - Java 17 o superiore.
-    - Maven 3.8+.
-    - MongoDB Community Server.
-- Frontend:
-    - Node.js 16+.
-    - npm o yarn.
+## Verifiche
 
-## Roadmap
-- Configurazione base di Spring Boot con MongoDB.
-- Autenticazione JWT e OAuth2.
-- Frontend React con Redux Toolkit.
-- Supporto PWA (Workbox).
-- Implementazione offline-first (IndexedDB).
-- Condivisione avanzata tra utenti.
+```sh
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm test:integration
+pnpm build
+pnpm exec playwright install --with-deps chromium
+pnpm test:e2e
+pnpm audit
+```
 
-## Contributi
-Contributi, bug report e suggerimenti sono i benvenuti! Per contribuire:
+I test PostgreSQL usano PGlite con fixture Auth/Storage e le migrazioni reali;
+i test room usano workerd/SQLite reali con adapter ACL di test. I browser
+usano provider e Monaco reali, metadati/Auth sintetici isolati nel test worker.
+Per verificare anche Supabase reale: `pnpm test:rls` con tre JWT staging.
+Non confondere questi test locali con una verifica OAuth sul provider.
 
-Fai un fork del repository.
-Crea un branch per la tua feature/bugfix:
-git checkout -b feature/nome-feature
-Invia una pull request.
+[Deploy](docs/DEPLOY.md) · [Operazioni e backup](docs/RUNBOOK.md) ·
+[API](docs/API.md) · [Sicurezza](docs/THREAT_MODEL.md) ·
+[Dipendenze](docs/DEPENDENCIES.md) · [SDD integrale](docs/SDD.md)

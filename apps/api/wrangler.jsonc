@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ultrapad-api", "main": "src/index.ts", "compatibility_date": "2026-08-15", "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "DocumentRoom" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DocumentRoom"] }],
+  "vars": { "APP_ORIGIN": "http://localhost:5173", "SUPABASE_URL": "", "SUPABASE_ANON_KEY": "" },
+  "observability": { "enabled": false }
+}

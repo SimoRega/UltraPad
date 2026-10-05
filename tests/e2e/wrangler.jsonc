@@ -1,0 +1,5 @@
+{
+ "name":"ultrapad-test-only","main":"../integration/worker.ts","compatibility_date":"2026-08-15","compatibility_flags":["nodejs_compat"],
+ "durable_objects":{"bindings":[{"name":"ROOMS","class_name":"TestRoom"}]},
+ "migrations":[{"tag":"v1","new_sqlite_classes":["TestRoom"]}]
+}
