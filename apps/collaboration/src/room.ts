@@ -1,3 +1,4 @@
+import { profileFor, type Profile } from '../../../packages/profile/src/index';
 import { validateRichDelta, type RichOp } from '../../../packages/rich-text/src/index';
 import { publishCheckpoint } from './backup';
 import { DurableObject } from 'cloudflare:workers';
@@ -52,7 +53,29 @@ export class DocumentRoom extends DurableObject<Env> {
       this.ctx.storage.sql.exec('INSERT INTO meta VALUES(1,?,?,0,?,NULL)', fileId, generation, Y.encodeStateAsUpdate(this.doc).buffer);
     }
   }
+  protected async participantProfile(token:string,userId:string):Promise<Profile|undefined> {
+    const {data,error}=await database(this.env,token).auth.getUser(token);
+    if(error)throw new Error('PROFILE_UNAVAILABLE');
+    return data.user?.id===userId?profileFor(userId,data.user.email,data.user.user_metadata):undefined;
+  }
   async fetch(request: Request): Promise<Response> {
+    if(new URL(request.url).pathname==='/presence') {
+      const leases=new Map<string,Lease>();
+      for(const socket of this.ctx.getWebSockets()) {
+        const lease=socket.deserializeAttachment() as Lease;
+        if(lease?.userId && lease.expiresAt>Date.now()) leases.set(lease.userId,lease);
+      }
+      const profiles=await Promise.all([...leases.values()].map(async lease=>{
+        try {
+          await this.authorize(lease.token,lease.fileId,lease.generation);
+          const profile=await this.participantProfile(lease.token,lease.userId);
+          // Check the session again after asynchronous identity lookups.
+          const connected=this.ctx.getWebSockets().some(socket=>{const current=socket.deserializeAttachment() as Lease;return current.sessionId===lease.sessionId&&current.expiresAt>Date.now();});
+          return connected?profile:undefined;
+        }catch{return undefined;}
+      }));
+      return Response.json(profiles.filter(Boolean));
+    }
     return this.enqueue(async () => {
       const url = new URL(request.url);
       if (url.pathname === '/ticket') {

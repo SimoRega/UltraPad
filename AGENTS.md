@@ -1,7 +1,7 @@
 # UltraPad
 
 Leggi docs/SDD.md, docs/PROGRESS.md e gli ADR prima di modificare il progetto.
-Scope corrente: v1.2 (dialog, workspace, pastelli/sfondi, documenti TXT visuali)
+Scope corrente: v1.3 (chiusura tab, temporanei, anteprime, profilo e presenza)
 autorizzato dal proprietario; ADR 0004 anticipa il rich text di M4.
 Office e le altre funzionalità M4–M8 restano separate; gate R1 aperti.
 Nessuna persistenza o autorizzazione fittizia nel codice di produzione.

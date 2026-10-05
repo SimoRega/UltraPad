@@ -203,3 +203,31 @@ Browser include typography/pennello/lista/zero spacing, stili condivisi,
 offline, viewer, import nativo/promozione, reload e vista sorgente.
 Cache Vite separate tra app e harness evitano invalidazione incrociata dei
 moduli lazy. Nessuna configurazione di test entra in produzione.
+
+## v1.3 — Chiusura, temporanei, anteprime, profili e presenza
+
+Implementati X sulle tab e sul temporaneo, selezione della tab rimasta,
+spazio /temporary, sidebar workspace espandibile, anteprima testo per file
+server e temporanei senza aprire una room. Chiusura attende la coda locale;
+IndexedDB mantiene gli update offline per replay; errore di persistenza
+locale blocca la X e mantiene il testo esportabile. Temporanei conservati
+fino alla chiusura della scheda, con X distinta da eliminazione.
+
+Nome/cognome suggeriti dalla mail, modificabili nell'account; avatar raster
+compatto nell'account Supabase Auth, con crop/compressione e fallback iniziali.
+GET presence autorizzato ricava i profili dalle sessioni room verificate,
+non dai dati awareness; gestisce socket chiusi/scaduti/revocati e hibernation.
+Polling home/editor ogni 10 secondi solo in viewport, dedup per file/account;
+lookup esterni fuori dalla coda di commit. ADR 0005 descrive limiti, JWT,
+CSP e costi. Nessuna migrazione SQL o modifica del protocollo CRDT.
+
+Verifiche locali: typecheck/lint, 19 unità/PGlite, 20 integrazione workerd,
+33 browser Chromium e 3 setup (75 test), build frontend e Worker dry run,
+tutti passati. Nuovi browser verificano chiusura attiva/inattiva/ultima tab,
+conservazione temporanei, offline/replay, errore IndexedDB, espansione/mobile,
+anteprima, upload reale raster e richiesta Auth con nome/cognome/avatar,
+presenza in home/editor e scomparsa dopo chiusura. Come già in v1.2, lo shim
+locale per enumerazione interfacce Node è usato solo nel container e non
+committato. Le fixture Auth/ACL non certificano il profilo su Supabase remoto:
+nessun deploy o test OAuth reale aggiuntivo eseguito. Gate R1 invariati.
+Aggiornare frontend e Worker insieme e mantenere gli header CSP (V1_3.md).

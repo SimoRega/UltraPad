@@ -77,6 +77,10 @@ app.post('/v1/files/:id/collaboration-ticket', async c => {
   const options=z.object({document:z.boolean().optional()}).parse(await c.req.json());if(options.document&&!/\.txt$/i.test(auth.file.name))return c.json({error:'DOCUMENT_TYPE_REQUIRED'},400);
   return room(c.env, fileId, auth.file.generation).fetch(new Request('https://room/ticket', { method: 'POST', body: JSON.stringify({ token: c.get('token'), fileId, generation: auth.file.generation,document:options.document }) }));
 });
+app.get('/v1/files/:id/presence', async c => {
+  const fileId=id.parse(c.req.param('id'));const {file}=await access(c.env,c.get('token'),fileId);
+  return room(c.env,fileId,file.generation).fetch('https://room/presence');
+});
 app.get('/v1/files/:id/snapshot', async c => {
   const fileId = id.parse(c.req.param('id')); const { file } = await access(c.env, c.get('token'), fileId);
   return room(c.env, fileId, file.generation).fetch('https://room/snapshot');

@@ -47,3 +47,11 @@ commit SQLite, non completamento della copia Storage o backup indipendente.
 ## Estensioni v1.2
 
 GET /v1/dashboard accetta workspace_id UUID e filtra sotto RLS prima del limite. POST /v1/files/:id/collaboration-ticket accetta {document:true} solo per TXT: prepara newline finale sotto ACL di scrittura. Snapshot/preview aggiungono delta (insert string, attributi tipografici validati). Restore/copia conservano il delta; protocollo binario versione 1 invariato. Vedere ADR/0004-v12-documents.md.
+
+## v1.3 presenza
+
+GET /v1/files/:id/presence restituisce un array {id, firstName, lastName, avatar}
+per sessioni autenticate con file aperto. Richiede accesso corrente al file;
+nessun token/email restituito. Stato effimero, deduplicato per account.
+Il profilo si aggiorna via Supabase Auth updateUser con first_name, last_name
+e profile_avatar, senza una nuova API privilegiata (ADR 0005).

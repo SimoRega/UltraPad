@@ -165,6 +165,7 @@ export class CollaborationClient {
     clearTimeout(this.awarenessTimer);
     this.awarenessTimer = setTimeout(() => this.send({ type: 'awareness' }, encodeAwarenessUpdate(this.awareness, [...added, ...updated, ...removed].filter(k => k === this.doc.clientID))), 120);
   };
+  get localSaveFailed() { return this.persistenceFailed; }
   get pending() { return this.outbox.length; }
   get text() { return this.doc.getText('content').toString(); }
   async settled() { await this.queue; }

@@ -46,3 +46,8 @@ it('local WebSocket upgrades use the same origin policy without issuing edit aut
  const response=await app.fetch(new Request('http://127.0.0.1:8787/ws/00000000-0000-4000-8000-000000000002/1',{headers:{Origin:'http://127.0.0.1:5173',Upgrade:'websocket'}}),bindings);
  expect(response.status).toBe(101);response.webSocket!.accept();response.webSocket!.close();
 });
+
+it('presence requires authentication before disclosing session identities',async()=>{
+ const response=await app.fetch(new Request('http://127.0.0.1:8787/v1/files/00000000-0000-4000-8000-000000000001/presence',{headers:{Origin:bindings.APP_ORIGIN}}),bindings);
+ expect(response.status).toBe(401);expect(await response.json()).toMatchObject({error:'UNAUTHORIZED'});
+});
