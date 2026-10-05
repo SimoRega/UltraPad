@@ -19,9 +19,10 @@ import { toolsFor, insertion, type TextTool } from '../../../packages/presentati
   if (label === 'json') return new JsonWorker(); if (label === 'css') return new CssWorker();
   if (label === 'html') return new HtmlWorker(); if (label === 'typescript' || label === 'javascript') return new TsWorker(); return new EditorWorker();
 } };
-export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged }: EditorProps) {
+export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged }: EditorProps) {
   const {theme}=useTheme(); const toolset=toolsFor(file.name);
   const localRef=useRef(localText);localRef.current=localText;const localChangeRef=useRef(localChanged);localChangeRef.current=localChanged;
+  const contentRef=useRef(contentChanged);contentRef.current=contentChanged;
   const [localFailure,setLocalFailure]=useState(false);
   const [client, setClient] = useState<CollaborationClient>(); const [status, setStatus] = useState<SaveStatus>('locale');
   const [pending, setPending] = useState(0); const [error, setError] = useState(''); const [currentRole, setRole] = useState(role);
@@ -55,7 +56,8 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
     const localDoc=new Y.Doc();const localContent=localDoc.getText('content');if(localDelta)localContent.applyDelta(validateRichDelta(localDelta));else localContent.insert(0,localRef.current??'');
     const model=monaco.editor.createModel(localRef.current??'',file.language,monaco.Uri.parse(`ultrapad://files/${file.id}/${file.generation}`));
     const instance=monaco.editor.create(container.current,{model,theme:'vs-dark',readOnly:!canEdit(role),wordWrap:'on',minimap:{enabled:false},fontSize:14,fontFamily:'ui-monospace, SFMono-Regular, Consolas, monospace',padding:{top:24},automaticLayout:true,scrollBeyondLastLine:false,ariaLabel:`Contenuto ${file.name}`});
-    const listener=model.onDidChangeContent(event=>{if(localChangeRef.current)try{localDoc.transact(()=>{for(const change of [...event.changes].sort((a,b)=>b.rangeOffset-a.rangeOffset)){if(change.rangeLength)localContent.delete(change.rangeOffset,change.rangeLength);if(change.text)localContent.insert(change.rangeOffset,change.text);}});localChangeRef.current(model.getValue(),validateRichDelta(localContent.toDelta()));setLocalFailure(false);setError('');}catch(e){setLocalFailure(true);setError(e instanceof Error?e.message:'Copie temporanee non salvate. Scarica il contenuto.');}});
+    contentRef.current?.(model.getValue());
+    const listener=model.onDidChangeContent(event=>{contentRef.current?.(model.getValue());if(localChangeRef.current)try{localDoc.transact(()=>{for(const change of [...event.changes].sort((a,b)=>b.rangeOffset-a.rangeOffset)){if(change.rangeLength)localContent.delete(change.rangeOffset,change.rangeLength);if(change.text)localContent.insert(change.rangeOffset,change.text);}});localChangeRef.current(model.getValue(),validateRichDelta(localContent.toDelta()));setLocalFailure(false);setError('');}catch(e){setLocalFailure(true);setError(e instanceof Error?e.message:'Copie temporanee non salvate. Scarica il contenuto.');}});
     setEditor(instance);
     return ()=>{listener.dispose();instance.dispose();model.dispose();localDoc.destroy();};
   },[file.id,file.generation,file.language,file.name,role]);

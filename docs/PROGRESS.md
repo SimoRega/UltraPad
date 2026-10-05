@@ -231,3 +231,9 @@ locale per enumerazione interfacce Node è usato solo nel container e non
 committato. Le fixture Auth/ACL non certificano il profilo su Supabase remoto:
 nessun deploy o test OAuth reale aggiuntivo eseguito. Gate R1 invariati.
 Aggiornare frontend e Worker insieme e mantenere gli header CSP (V1_3.md).
+
+## Evolutive 1.3.1
+
+Issue #1: intestazione compatta, layout elenco/griglia/raggruppati, temporanei
+aperti immediatamente e preview affiancate HTML/Markdown/LaTeX con snapshot
+in nuova pagina. Scelte e limiti in ADR 0006 e docs/V1_3.md.

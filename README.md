@@ -10,7 +10,7 @@ importanti. Account esterni e deploy non sono stati eseguiti automaticamente.
 
 ## Funzioni implementate
 
-Versione 1.3: [novità e aggiornamento](docs/V1_3.md).
+Versione 1.3.1: [novità e aggiornamento](docs/V1_3.md).
 
 - Chiusura tab, spazio Temporanei, sidebar espandibile e anteprime dalla home.
 - Profilo personale con nome/cognome/foto e presenza dei collaboratori nei file di team.

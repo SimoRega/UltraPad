@@ -58,7 +58,7 @@ for(const mode of ['network','unavailable'] as const) test(`API ${mode} failure 
  await expect(page.getByRole('alert')).toContainText('Backend UltraPad non raggiungibile');
  await page.unroute('**/api/v1/bootstrap');
  await page.getByRole('button',{name:'Riprova',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Riprendi un’idea. Falla crescere insieme.'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'I tuoi lavori'})).toBeVisible();
 });
 
 test('origin rejection explains the configured frontend address',async({page})=>{
@@ -80,8 +80,8 @@ test('v1.1 full home groups real accessible files by team activity and topic',as
 });
 test('temporary files use format tools, survive reload and never send content to the API',async({page})=>{
  await signedIn(page);let mutations=0;page.on('request',r=>{if(r.url().includes('/v1/mutations'))mutations++;});await page.goto('/');
- await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();
- await page.getByLabel('Nome', {exact:true}).fill('bozza.md');await page.getByRole('button',{name:'Crea',exact:true}).click();
+ await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByRole('button',{name:'Nome e formato',exact:true}).click();
+ await page.getByLabel('Nome', {exact:true}).fill('bozza.md');await page.getByRole('button',{name:'Salva',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('temporaneo');
  await page.getByRole('button',{name:'Grassetto',exact:true}).click();await expect(page.locator('.view-lines')).toContainText('**testo**');
  await page.reload();await expect(page.locator('.view-lines')).toContainText('**testo**');expect(mutations).toBe(0);
@@ -126,14 +126,14 @@ test('single file creation needs no project selection and opens durable editor',
 });
 test('promotion retains temporary text until durable ACK and preserves recovery copy',async({page})=>{
  await signedIn(page);await personalFileFixture(page);await page.goto('/');
- await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('da-conservare.md');await page.getByRole('button',{name:'Crea',exact:true}).click();
+ await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByRole('button',{name:'Nome e formato',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('da-conservare.md');await page.getByRole('button',{name:'Salva',exact:true}).click();
  await page.getByRole('button',{name:'Grassetto',exact:true}).click();await expect(page.locator('.view-lines')).toContainText('**testo**');
  await page.getByRole('button',{name:'Salva nel DB',exact:true}).click();await expect(page.getByRole('status')).toHaveText('salvato sul server');await expect(page.locator('.view-lines')).toContainText('**testo**');
  await page.reload();await expect(page.getByRole('status')).toHaveText('salvato sul server');await expect(page.locator('.view-lines')).toContainText('**testo**');
  await page.getByRole('button',{name:'UltraPad',exact:true}).click();await expect(page.getByRole('heading',{name:'da-conservare.md',exact:true})).toBeVisible();
 });
 test('JSON tools validate errors and formatter uses real Monaco without corrupting source',async({page})=>{
- await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('dati.json');await page.getByRole('button',{name:'Crea',exact:true}).click();
+ await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByRole('button',{name:'Nome e formato',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('dati.json');await page.getByRole('button',{name:'Salva',exact:true}).click();
  await page.getByRole('button',{name:'Oggetto',exact:true}).click();await page.getByRole('button',{name:'Verifica JSON',exact:true}).click();await expect(page.locator('.editor-region .notice[role=alert]')).toContainText('JSON valido.');
  await page.getByRole('button',{name:'Formatta documento',exact:true}).click();await expect(page.locator('.view-lines')).toContainText('"chiave"');
  await page.locator('.view-lines').click({position:{x:30,y:10}});await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('{bad');await page.getByRole('button',{name:'Verifica JSON',exact:true}).click();await expect(page.locator('.editor-region .notice[role=alert]')).toBeVisible();await expect(page.locator('.editor-region .notice[role=alert]')).not.toContainText('JSON valido.');

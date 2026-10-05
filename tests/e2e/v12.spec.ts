@@ -8,7 +8,7 @@ async function signedIn(page: Page) {
 }
 
 async function temporary(page:Page,name='documento.txt'){
- await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill(name);await page.getByRole('button',{name:'Crea',exact:true}).click();
+ await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByRole('button',{name:'Nome e formato',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill(name);await page.getByRole('button',{name:'Salva',exact:true}).click();
  await expect(page.getByRole('textbox',{name:`Contenuto ${name}`})).toBeVisible();return page.getByRole('textbox',{name:`Contenuto ${name}`});
 }
 async function selectAll(page:Page){await page.locator('.ql-editor').click();await page.keyboard.press('ControlOrMeta+A');}
