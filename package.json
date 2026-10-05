@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.25.0",
   "scripts": {
-    "dev": "concurrently -k 'pnpm dev:api' 'pnpm dev:web'",
+    "dev": "concurrently -k \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:web": "vite --config apps/web/vite.config.ts",
     "dev:api": "wrangler dev --config apps/api/wrangler.jsonc",
     "build": "pnpm build:web && pnpm build:api",
@@ -19,7 +19,9 @@
     "test:rls": "node scripts/test-rls.mjs",
     "deploy:api": "wrangler deploy --config apps/api/wrangler.jsonc",
     "deploy:web": "wrangler pages deploy apps/web/dist --project-name ultrapad",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "setup:local": "node scripts/setup-local.mjs",
+    "test:setup": "node --test tests/setup.spec.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",

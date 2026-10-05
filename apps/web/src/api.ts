@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-export const configured = Boolean(supabaseUrl && supabaseKey && import.meta.env.VITE_API_URL);
+export const configured = Boolean(supabaseUrl && supabaseKey && import.meta.env.VITE_API_URL && !/YOUR_/.test(`${supabaseUrl} ${supabaseKey}`) && !supabaseUrl.includes('/rest/v1') && !supabaseKey.startsWith('sb_secret_'));
 export const auth = configured ? createClient(supabaseUrl, supabaseKey, { auth: { flowType: 'pkce' } }) : null;
 export const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8787';
 export async function request<T>(path: string, body?: unknown): Promise<T> {

@@ -30,15 +30,29 @@ async function cached<T>(userId: string, key: string, fetcher: () => Promise<T>)
 }
 function App() {
   const [session, setSession] = useState<Session | null>(null); const [loaded, setLoaded] = useState(!auth);
+  const [loginError, setLoginError] = useState(() => {
+    const url=new URL(window.location.href);const fragment=new URLSearchParams(url.hash.slice(1));
+    return url.searchParams.has('error') || fragment.has('error') ? 'Accesso GitHub non completato. Verifica il provider GitHub e gli URL di redirect in Supabase, quindi riprova.' : '';
+  });
+  const [signingIn,setSigningIn]=useState(false);
   useEffect(() => {
     if (!auth) return;
-    auth.auth.getSession().then(({ data }) => { setSession(data.session); setLoaded(true); });
+    let active=true;
+    auth.auth.getSession().then(({ data, error }) => { if(active) {setSession(data.session);if(error)setLoginError('Sessione non recuperabile. Riprova ad accedere con GitHub.');setLoaded(true);} }).catch(()=>{if(active){setLoginError('Connessione al servizio di login non riuscita. Verifica la rete e riprova.');setLoaded(true);}});
     const { data } = auth.auth.onAuthStateChange((_event, next) => { setSession(next); queryClient.clear(); });
-    return () => data.subscription.unsubscribe();
+    return () => { active=false;data.subscription.unsubscribe(); };
   }, []);
+  async function signIn() {
+    if(!auth || signingIn)return;
+    setSigningIn(true);setLoginError('');
+    try {
+      const {error}=await auth.auth.signInWithOAuth({provider:'github',options:{redirectTo:new URL('/',window.location.origin).href}});
+      if(error) throw error;
+    } catch { setLoginError('Accesso GitHub non avviato. Verifica la connessione e la configurazione del provider in Supabase.');setSigningIn(false); }
+  }
   if (!configured) return <main className="landing"><div className="brand"><b>U</b> UltraPad</div><h1>Uno spazio per<br /><em>pensare insieme.</em></h1><p>Note, codice e progetti. Condivisione in tempo reale e lavoro recuperabile.</p><div className="setup"><h2>Configura il tuo ambiente</h2><p>Imposta le tre variabili pubbliche in <code>.env</code>, applica la migrazione SQL e configura il backend. Le istruzioni complete sono in <code>docs/DEPLOY.md</code>.</p><p>Questa schermata indica un ambiente non configurato.</p></div></main>;
   if (!loaded) return <main className="landing">Caricamento sessione…</main>;
-  if (!session) return <main className="landing"><div className="brand"><b>U</b> UltraPad</div><h1>Il tuo prossimo progetto,<br /><em>in buona compagnia.</em></h1><p>Scrivi note, modifica codice e condividi idee nello stesso spazio.</p><button className="primary" onClick={() => auth?.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin } })}>Accedi con GitHub →</button><p className="muted">TXT · Markdown · JSON · XML · Java · C# · LaTeX come sorgente</p></main>;
+  if (!session) return <main className="landing"><div className="brand"><b>U</b> UltraPad</div><h1>Il tuo prossimo progetto,<br /><em>in buona compagnia.</em></h1><p>Scrivi note, modifica codice e condividi idee nello stesso spazio.</p>{loginError && <div className="notice" role="alert">{loginError}</div>}<button className="primary" disabled={signingIn} onClick={() => void signIn()}>{signingIn?'Reindirizzamento a GitHub…':'Accedi con GitHub →'}</button><p className="muted">TXT · Markdown · JSON · XML · Java · C# · LaTeX come sorgente</p></main>;
   return <Routes><Route path="/" element={<WorkspaceApp session={session} />} /><Route path="/projects/:projectId/files/:fileId" element={<WorkspaceApp session={session} />} /><Route path="/projects/:projectId" element={<WorkspaceApp session={session} />} /></Routes>;
 }
 function WorkspaceApp({ session }: { session: Session }) {

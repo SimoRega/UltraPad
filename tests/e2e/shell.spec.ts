@@ -17,3 +17,20 @@ test('real Monaco component edits through the durable collaboration provider',as
  await expect(page.locator('.view-lines')).toContainText('Monaco collaborativo funziona');
  await page.screenshot({path:'test-results/workspace.png',fullPage:true});
 });
+
+test('OAuth login sends GitHub provider, root redirect and PKCE challenge',async({page})=>{
+ await page.route('http://localhost:8788/auth/v1/authorize**',route=>route.fulfill({contentType:'text/html',body:'OAuth provider fixture'}));
+ await page.goto('/');
+ const outgoing=page.waitForRequest(request=>request.url().includes('/auth/v1/authorize'));
+ await page.getByRole('button',{name:'Accedi con GitHub →'}).click();
+ const url=new URL((await outgoing).url());
+ expect(url.searchParams.get('provider')).toBe('github');
+ expect(url.searchParams.get('redirect_to')).toBe('http://localhost:5173/');
+ expect(url.searchParams.get('code_challenge')).toBeTruthy();
+ expect(url.searchParams.get('code_challenge_method')).toBe('s256');
+});
+test('OAuth callback error is visible and permits another login attempt',async({page})=>{
+ await page.goto('/#error=access_denied&error_description=fixture');
+ await expect(page.getByRole('alert')).toContainText('Accesso GitHub non completato');
+ await expect(page.getByRole('button',{name:'Accedi con GitHub →'})).toBeEnabled();
+});

@@ -31,10 +31,10 @@ Node 24 e pnpm 11.25.0. Serve un progetto Supabase development/staging.
 
 ```sh
 pnpm install --frozen-lockfile
-cp .env.example .env
-cp apps/api/.dev.vars.example apps/api/.dev.vars
-# Configurare variabili e applicare le migrazioni; vedere docs/DEPLOY.md.
-pnpm doctor
+pnpm setup:local
+# Inserire la chiave pubblica Supabase, applicare migrazioni e configurare OAuth.
+# Guida Windows e valori del progetto: docs/LOCAL_LOGIN.md.
+pnpm run doctor
 pnpm dev
 ```
 
@@ -60,6 +60,6 @@ usano provider e Monaco reali, metadati/Auth sintetici isolati nel test worker.
 Per verificare anche Supabase reale: `pnpm test:rls` con tre JWT staging.
 Non confondere questi test locali con una verifica OAuth sul provider.
 
-[Deploy](docs/DEPLOY.md) · [Operazioni e backup](docs/RUNBOOK.md) ·
+[Login locale / Windows](docs/LOCAL_LOGIN.md) · [Deploy](docs/DEPLOY.md) · [Operazioni e backup](docs/RUNBOOK.md) ·
 [API](docs/API.md) · [Sicurezza](docs/THREAT_MODEL.md) ·
 [Dipendenze](docs/DEPENDENCIES.md) · [SDD integrale](docs/SDD.md)

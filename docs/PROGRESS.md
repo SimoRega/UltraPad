@@ -29,7 +29,8 @@ un deploy**. L'SDD completo è conservato in `docs/SDD.md`.
 | TypeScript strict e lint | Passati |
 | Test dominio/protocollo + PostgreSQL PGlite | 7 passati |
 | Test workerd/SQLite/Durable Objects | 7 passati |
-| Playwright Chromium | 3 passati |
+| Playwright Chromium | 5 passati |
+| Setup locale Node | 3 passati |
 | Build frontend + dry run Worker | Passati |
 | Audit dipendenze | Nessun advisory rilevato al controllo |
 
@@ -80,3 +81,26 @@ M4–M8 restano successive come richiesto dall'SDD: editor rich text,
 commenti, lavagna, runner isolati, compilazione LaTeX, Office/RTF e relative
 policy/licenze. Java/C#/TEX sono ora sorgenti testuali, senza esecuzione.
 Non attivare queste milestone per aggirare i gate R1.
+
+## Aggiornamento login locale e Windows
+
+Configurati gli URL pubblici del progetto `iqlxqzfivunyudfaxjlr`, introdotto
+`pnpm setup:local` per inserire la chiave pubblica senza committarla, corretto
+il quoting dello script dev su Windows e fissata la porta 5173. Doctor ora
+verifica coerenza frontend/API, chiave pubblica e provider GitHub remoto.
+Gestiti errori sessione e callback OAuth, con redirect esplicito alla root.
+Guida dedicata: [LOCAL_LOGIN.md](LOCAL_LOGIN.md).
+
+La Publishable key fornita dal proprietario è configurata negli example e
+nel Worker; nessuna Secret key è stata inserita. OAuth, migrazioni e creazione
+del workspace sul progetto reale restano da verificare dal PC dell’utente.
+Il collegamento Supabase/GitHub del repo non configura il provider OAuth.
+
+Verifica reale del progetto: endpoint Auth raggiungibile e Publishable key
+accettata; `external.github` risulta disabilitato al controllo. Il login è
+bloccato finché il proprietario non configura il provider e i redirect.
+Typecheck, lint, 7 test dominio/PostgreSQL, 7 room, 3 setup e 5 browser
+passati; build frontend e dry run Worker passati. Test OAuth browser
+verificano richiesta PKCE/redirect e callback di errore con fixture, non
+un’autorizzazione GitHub reale. Usare `pnpm run doctor`: `pnpm doctor` è
+un comando interno di pnpm 11 e non esegue lo script del progetto.

@@ -5,6 +5,10 @@ Objects SQLite, Supabase Auth/Postgres/Storage. Non sono stati creati account,
 registrate applicazioni OAuth o pubblicati deploy durante l'implementazione.
 I seguenti passaggi sono manuali e ordinati.
 
+Per il progetto UltraPad già creato (`iqlxqzfivunyudfaxjlr`) e l’avvio Windows,
+seguire prima [LOCAL_LOGIN.md](LOCAL_LOGIN.md). `pnpm setup:local` configura i
+due file locali con URL corretto e chiave pubblica inserita sul PC.
+
 ## 1. Supabase e OAuth
 
 1. Creare un progetto Supabase separato per staging. Annotare URL e chiave
@@ -28,7 +32,7 @@ Lasciare API localhost:8787 e APP_ORIGIN localhost:5173 nel profilo locale.
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm doctor
+pnpm run doctor
 pnpm dev
 ```
 
