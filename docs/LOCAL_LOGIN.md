@@ -4,8 +4,9 @@ Progetto: `iqlxqzfivunyudfaxjlr`, regione Frankfurt.
 URL base: `https://iqlxqzfivunyudfaxjlr.supabase.co`.
 La Data API usa `/rest/v1/`, ma createClient deve ricevere l'URL base.
 Il collegamento GitHub del repository non abilita il login GitHub degli utenti.
-Al controllo dal progetto reale la Publishable key è stata accettata, ma
-GitHub risultava disabilitato come provider Auth. Eseguire il punto 3.
+Al controllo iniziale la Publishable key era accettata, ma GitHub era
+disabilitato; il proprietario ha poi confermato un login riuscito.
+Se il login funziona già, non occorre riconfigurare OAuth.
 
 ## 1. Configurare i file sul PC
 
@@ -81,7 +82,7 @@ migrazioni o un login interattivo. Gli errori HTTP non stampano credenziali.
 
 Aprire http://localhost:5173/ → Accedi con GitHub → autorizzare l'OAuth App.
 Al ritorno l'interfaccia permette di creare workspace, progetto e file.
-L'API deve restare in esecuzione su localhost:8787 per usare l'app.
+L'API deve restare in esecuzione su 127.0.0.1:8787 per usare l'app.
 Se 5173 è occupata Vite si ferma: non cambia porta silenziosamente.
 Per fermare i servizi: Ctrl+C.
 
@@ -95,7 +96,18 @@ Per fermare i servizi: Ctrl+C.
 - Callback mismatch GitHub: callback completo Supabase, non localhost.
 - Login riuscito, errore nel caricamento workspace: controllare le migrazioni
   e che API e frontend usino lo stesso URL e la stessa chiave pubblica.
-- Connessione API fallita: controllare il terminale dev:api e localhost:8787/health.
+- Connessione API fallita: il login usa Supabase, mentre workspace/progetti/file
+  richiedono il Worker locale. Avviare `pnpm.cmd dev`, non solo `dev:web`.
+  In un secondo terminale: `pnpm.cmd run doctor -- --api`.
+  Verificare http://127.0.0.1:8787/health e http://localhost:5173/api/health.
+  Entrambi devono restituire `service: ultrapad` e `configured: true`.
+  Se il primo fallisce, controllare l'errore nel terminale `[0]` API;
+  se solo il secondo fallisce, riavviare Vite con il nuovo codice/configurazione.
+  Durante development richieste HTTP e WebSocket passano da `/api` sul server
+  Vite, che inoltra verso IPv4. In produzione serve l'URL HTTPS del Worker.
+  I vecchi URL locali in `.env` sono gestiti dal proxy, senza cambiare Supabase.
+  Dopo il riavvio premere Riprova o ricaricare la pagina. Le mutazioni fallite
+  non vengono ripetute automaticamente, per evitare duplicazioni.
 - Errore PKCE: avviare il login e completarlo nello stesso browser/profilo
   e sulla stessa origine; riprovare un nuovo login senza riutilizzare callback.
 

@@ -27,9 +27,9 @@ un deploy**. L'SDD completo è conservato in `docs/SDD.md`.
 | Verifica | Esito |
 |---|---|
 | TypeScript strict e lint | Passati |
-| Test dominio/protocollo + PostgreSQL PGlite | 7 passati |
-| Test workerd/SQLite/Durable Objects | 7 passati |
-| Playwright Chromium | 5 passati |
+| Test dominio/protocollo + PostgreSQL PGlite | 10 passati |
+| Test workerd/SQLite/Durable Objects | 9 passati |
+| Playwright Chromium | 8 passati |
 | Setup locale Node | 3 passati |
 | Build frontend + dry run Worker | Passati |
 | Audit dipendenze | Nessun advisory rilevato al controllo |
@@ -104,3 +104,26 @@ passati; build frontend e dry run Worker passati. Test OAuth browser
 verificano richiesta PKCE/redirect e callback di errore con fixture, non
 un’autorizzazione GitHub reale. Usare `pnpm run doctor`: `pnpm doctor` è
 un comando interno di pnpm 11 e non esegue lo script del progetto.
+
+## Correzione connessione API dopo il login
+
+Il proprietario riferisce login reale riuscito e Failed to fetch nelle
+operazioni. Non è disponibile il log del suo Worker Windows; non viene
+asserita una causa specifica della sua macchina. Corrette fragilità del
+trasporto locale: proxy Vite /api per HTTP e WebSocket, IPv4/porta API fissi,
+URL socket che conserva il prefisso, messaggi per API spenta/non raggiungibile,
+controllo health opzionale `pnpm run doctor -- --api`, Riprova per le query.
+I controlli CORS/Origin del Worker restano restrittivi.
+
+Typecheck, lint, build e dry run passati; 10 test unit/PostgreSQL, 9
+integrazione, 3 setup, 8 browser (30 in totale). I browser verificano GET e
+POST tramite il proxy con JWT/corpo mantenuti, Monaco/WebSocket, fallimento
+di rete e recupero del backend. Verifica aggiuntiva con server Vite reale
+e upstream spento: HTTP 503 con JSON API_UNAVAILABLE. Le prove CRUD con JWT
+e metadati fixture non certificano le migrazioni o la rete del PC Windows.
+
+Avvio combinato reale `pnpm dev` verificato con configurazione del progetto:
+health Worker diretto e attraverso Vite entrambi HTTP 200, configured true.
+Bootstrap senza JWT attraverso il proxy HTTP 401, quindi il trasporto non
+aggira l’autenticazione. Non è stata eseguita una mutazione sul database
+remoto perché non è disponibile una sessione JWT del proprietario.

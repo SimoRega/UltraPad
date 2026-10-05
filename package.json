@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "concurrently -k \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:web": "vite --config apps/web/vite.config.ts",
-    "dev:api": "wrangler dev --config apps/api/wrangler.jsonc",
+    "dev:api": "wrangler dev --config apps/api/wrangler.jsonc --ip 127.0.0.1 --port 8787",
     "build": "pnpm build:web && pnpm build:api",
     "build:web": "vite build --config apps/web/vite.config.ts",
     "build:api": "wrangler deploy --dry-run --config apps/api/wrangler.jsonc --outdir dist/api",

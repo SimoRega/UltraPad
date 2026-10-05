@@ -3,6 +3,7 @@ import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate, removeAwareness
 import { openDB, type IDBPDatabase } from 'idb';
 import { chunks, join, pack, unpack, type Header } from '../../contracts/src/index';
 import { canEdit, type Role, limits } from '../../domain/src/index';
+import { websocketEndpoint } from '../../contracts/src/api-endpoint';
 export type SaveStatus = 'locale' | 'sincronizzazione' | 'salvato sul server' | 'offline' | 'accesso cambiato' | 'errore salvataggio';
 type Pending = { id: string; payload: Uint8Array; generation: number };
 type Persisted = { state: Uint8Array; pending: Pending[]; userId: string; fileId: string; generation: number };
@@ -70,7 +71,7 @@ export class CollaborationClient {
       const info = await this.config.ticket();
       if (this.stopped || !this.networkOnline()) return;
       if (info.generation !== this.config.generation) { this.block('Il file è stato ripristinato. Le modifiche di questa versione restano esportabili.'); return; }
-      const url = new URL(`/ws/${this.config.fileId}/${info.generation}`, this.config.apiUrl); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = websocketEndpoint(this.config.apiUrl,this.config.fileId,info.generation);
       const ws = new WebSocket(url); this.ws = ws; ws.binaryType = 'arraybuffer'; this.authenticated = false; this.synced = false;
       ws.onopen = () => ws.send(pack({ type: 'hello', protocol: 1, ticket: info.ticket }));
       ws.onmessage = e => { this.incoming = this.incoming.then(() => { if (!this.stopped && this.ws === ws && this.connected()) return this.receive(e.data); }).catch(() => { this.notify('errore salvataggio', 'Risposta del server non valida.'); ws.close(); }); };

@@ -29,6 +29,15 @@ if(!failed) {
   else console.log('Progetto Supabase raggiungibile; chiave accettata e provider GitHub abilitato.');
  } catch(e) { console.error(`Verifica Supabase non riuscita (${e instanceof TypeError?'rete/DNS':e.message}). Controlla URL, chiave, rete e stato del progetto.`);failed=true; }
 }
+if(process.argv.includes('--api') && web) {
+ try {
+  const target=new URL(web.VITE_API_URL);if(['localhost','[::1]'].includes(target.hostname))target.hostname='127.0.0.1';
+  const response=await fetch(`${target.href.replace(/\/$/,'')}/health`,{signal:AbortSignal.timeout(5000)});
+  const state=await response.json();
+  if(!response.ok || state.service!=='ultrapad' || !state.configured)throw new Error('API_NON_CONFIGURATA');
+  console.log('Backend UltraPad locale raggiungibile e configurato.');
+ } catch { console.error('Backend UltraPad non raggiungibile/configurato: avvia pnpm dev e controlla il terminale API (porta 8787).');failed=true; }
+}
 console.log('Le credenziali non vengono stampate. Migrazioni, redirect e login reale restano da verificare: docs/LOCAL_LOGIN.md.');
 if(!failed) console.log('Configurazione pronta per la prova: pnpm dev → http://localhost:5173/');
 process.exitCode=failed?1:0;

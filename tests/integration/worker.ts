@@ -11,7 +11,12 @@ export class TestRoom extends DocumentRoom {
 export default { async fetch(request: Request, env: Env) {
  const url=new URL(request.url); let result: Response;
  if(request.method==='OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':request.headers.get('Origin')??'http://localhost:5174','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'}});
- if(url.pathname==='/ticket') {
+ if(url.pathname==='/health') {
+  result=Response.json({service:'ultrapad',configured:true});
+ } else if(url.pathname==='/v1/mutations' && request.method==='POST') {
+  const payload=await request.json<{op:string;args:Record<string,unknown>}>();
+  result=Response.json({...payload,authorized:request.headers.get('Authorization')==='Bearer test-proxy-token'});
+ } else if(url.pathname==='/ticket') {
   const body=await request.json<{token:string;fileId:string;generation:number}>();
   const stub=env.ROOMS.get(env.ROOMS.idFromName(`${body.fileId}:${body.generation}`));
   result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify(body)}));

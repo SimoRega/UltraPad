@@ -128,8 +128,8 @@ app.post('/v1/files/:id/restore', async c => {
   if (completed.error) throw new Error(completed.error.message); return c.json(completed.data);
 });
 app.onError((e, c) => {
-  const message = e instanceof z.ZodError ? 'INVALID_REQUEST' : e.message;
-  const status = message === 'UNAUTHORIZED' ? 401 : /FORBIDDEN|ACCESS_CHANGED/.test(message) ? 403 : message === 'CONFIGURATION_REQUIRED' ? 503 : 409;
+  const message = e instanceof z.ZodError ? 'INVALID_REQUEST' : /fetch failed|failed to fetch/i.test(e.message) ? 'SUPABASE_UNAVAILABLE' : e.message;
+  const status = message === 'UNAUTHORIZED' ? 401 : /FORBIDDEN|ACCESS_CHANGED/.test(message) ? 403 : ['CONFIGURATION_REQUIRED','SUPABASE_UNAVAILABLE','DATABASE_ERROR'].includes(message) ? 503 : 409;
   return c.json({ error: message }, status);
 });
 export default app;

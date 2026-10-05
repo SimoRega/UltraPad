@@ -38,7 +38,9 @@ pnpm run doctor
 pnpm dev
 ```
 
-Frontend: http://localhost:5173 — API locale: http://localhost:8787.
+Frontend: http://localhost:5173 — API locale: http://127.0.0.1:8787.
+In development HTTP e WebSocket usano il proxy `/api` di Vite.
+Con i servizi avviati: `pnpm run doctor -- --api` verifica anche il backend.
 In assenza di configurazione il frontend mostra istruzioni; non simula utenti.
 
 ## Verifiche

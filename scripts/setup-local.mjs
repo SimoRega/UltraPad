@@ -17,7 +17,7 @@ try {
  const key=input || fallback;
  if(!publicKeyValid(key)) throw new Error('Chiave pubblica non valida. Usa Publishable key oppure legacy anon. Nessun file modificato.');
  // Both files remain ignored by Git. Preserve unrelated settings, including backup secrets.
- await writeFile(resolve(root,'.env'),mergeEnv(current,{VITE_API_URL:'http://localhost:8787',VITE_SUPABASE_URL:url,VITE_SUPABASE_ANON_KEY:key}),{mode:0o600});
+ await writeFile(resolve(root,'.env'),mergeEnv(current,{VITE_API_URL:'http://127.0.0.1:8787',VITE_SUPABASE_URL:url,VITE_SUPABASE_ANON_KEY:key}),{mode:0o600});
  await writeFile(resolve(root,'apps/api/.dev.vars'),mergeEnv(await read('apps/api/.dev.vars'),{APP_ORIGIN:'http://localhost:5173',SUPABASE_URL:url,SUPABASE_ANON_KEY:key}),{mode:0o600});
  console.log('Salvati .env e apps/api/.dev.vars. La chiave non viene stampata.');
  console.log(`Callback GitHub OAuth: ${url}/auth/v1/callback`);
