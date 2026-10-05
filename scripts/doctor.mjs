@@ -25,8 +25,8 @@ if(!failed) {
   const response=await fetch(`${web.VITE_SUPABASE_URL}/auth/v1/settings`,{headers:{apikey:web.VITE_SUPABASE_ANON_KEY},signal:AbortSignal.timeout(10000)});
   if(!response.ok) throw new Error(`HTTP ${response.status}`);
   const settings=await response.json();
-  if(!settings.external?.github) { console.error('Connessione Supabase riuscita, ma GitHub non è abilitato in Authentication → Providers.');failed=true; }
-  else console.log('Progetto Supabase raggiungibile; chiave accettata e provider GitHub abilitato.');
+  if(!settings.external?.github&&!settings.external?.google) { console.error('Connessione Supabase riuscita, ma né Google né GitHub sono abilitati in Authentication → Providers.');failed=true; }
+  else console.log(`Progetto Supabase raggiungibile; chiave accettata. Google: ${settings.external.google?'abilitato':'non abilitato (docs/V1_5.md)'}. GitHub: ${settings.external.github?'abilitato':'non abilitato'}.`);
  } catch(e) { console.error(`Verifica Supabase non riuscita (${e instanceof TypeError?'rete/DNS':e.message}). Controlla URL, chiave, rete e stato del progetto.`);failed=true; }
 }
 if(process.argv.includes('--api') && web) {

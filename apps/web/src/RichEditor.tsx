@@ -87,6 +87,6 @@ export default function RichEditor(props:EditorProps){
   </div>
   {error&&<div className="notice" role="alert">{error}<button onClick={()=>setError('')}>Chiudi messaggio</button></div>}
   <div className="document-scroll"><div className="document-paper" ref={holder}/></div>
-  <footer className="status-bar"><span role="status" aria-live="polite"><i className={`dot ${status==='salvato sul server'?'saved':''}`}/>{localChanged?localFailure?'temporaneo non salvato · scarica una copia':'temporaneo · solo questa scheda':status}{pending?` · ${pending} modifiche in attesa`:''}</span><span>{count} caratteri · {people} {people===1?'sessione':'sessioni'} · stili condivisi</span></footer>
+  <footer className="status-bar"><span role="status" aria-live="polite"><i className={`dot ${status==='salvato sul server'?'saved':''}`}/>{localChanged?localFailure?'temporaneo non salvato · scarica una copia':'temporaneo · solo questa scheda':status}{pending?` · ${pending} modifiche in attesa`:''}</span><span>{count} caratteri · {localChanged?'stili locali · nessuna sincronizzazione':`${people} ${people===1?'sessione':'sessioni'} · stili condivisi`}</span></footer>
  </section>;
 }

@@ -35,7 +35,7 @@ test('OAuth login sends GitHub provider, root redirect and PKCE challenge',async
 });
 test('OAuth callback error is visible and permits another login attempt',async({page})=>{
  await page.goto('/#error=access_denied&error_description=fixture');
- await expect(page.getByRole('alert')).toContainText('Accesso GitHub non completato');
+ await expect(page.getByRole('alert')).toContainText('Accesso non completato');
  await expect(page.getByRole('button',{name:'Accedi con GitHub →'})).toBeEnabled();
 });
 

@@ -237,3 +237,10 @@ Aggiornare frontend e Worker insieme e mantenere gli header CSP (V1_3.md).
 Issue #1: intestazione compatta, layout elenco/griglia/raggruppati, temporanei
 aperti immediatamente e preview affiancate HTML/Markdown/LaTeX con snapshot
 in nuova pagina. Scelte e limiti in ADR 0006 e docs/V1_3.md.
+
+## v1.5 — Google e ospite
+
+OAuth Google tramite Supabase/PKCE e spazio ospite locale separato, senza
+richieste API/DB/room o promozione automatica dei documenti. Nessuna migrazione
+SQL nuova; provider Google da attivare nel progetto remoto (docs/V1_5.md).
+ADR 0007 descrive limiti sessionStorage e isolamento dagli account.
