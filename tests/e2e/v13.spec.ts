@@ -16,7 +16,7 @@ test('v1.3 closing a tab keeps durable text and last close returns to project',a
 });
 test('v1.3 dedicated temporary workspace closes without deleting the draft',async({page})=>{
  await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'Workspace temporanei'}).click();await expect(page.getByRole('heading',{name:'Workspace temporanei'})).toBeVisible();
- await page.getByRole('button',{name:'+ File temporaneo',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('memo.txt');await page.getByRole('button',{name:'Crea',exact:true}).click();await page.getByRole('textbox',{name:'Contenuto memo.txt'}).fill('Da conservare');
+ await page.getByRole('button',{name:'+ File temporaneo',exact:true}).click();await page.getByRole('button',{name:'Nome e formato',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('memo.txt');await page.getByRole('button',{name:'Salva',exact:true}).click();await page.getByRole('textbox',{name:'Contenuto memo.txt'}).fill('Da conservare');
  await page.getByRole('button',{name:'Chiudi memo.txt'}).click();await expect(page).toHaveURL('/temporary');await page.getByRole('button',{name:'memo.txt',exact:true}).click();await expect(page.getByRole('textbox',{name:'Contenuto memo.txt'})).toHaveText('Da conservare');
 });
 test('v1.3 rail expands workspace names and home preview never opens an editor',async({page})=>{
