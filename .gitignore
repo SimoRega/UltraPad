@@ -9,3 +9,7 @@ test-results/
 coverage/
 *.log
 backups/
+
+# Override e segreti restano specifici del computer. .env.production è pubblico.
+.env.*.local
+.dev.vars.*

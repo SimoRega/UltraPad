@@ -42,9 +42,11 @@ richiede nuova build. `.env` e `.dev.vars` sono ignorati da Git.
 ## 3. API Cloudflare
 
 1. Accedere al proprio account Cloudflare con `pnpm exec wrangler login`.
-2. Nel file `apps/api/wrangler.jsonc`, sostituire i tre `vars` con l'origine
-   HTTPS del frontend, URL Supabase e chiave pubblica. `.dev.vars` continua
-   a fornire i valori locali durante development.
+   Il login Wrangler è specifico del computer: non viene copiato con Git.
+2. `apps/api/wrangler.jsonc` contiene già l’account UltraPad, la variabile
+   `APP_ORIGIN=https://ultrapad-5q2.pages.dev`, URL Supabase e Publishable key.
+   `apps/api/.dev.vars` continua a fornire i valori localhost nello sviluppo;
+   crearlo con `pnpm setup:local` su ogni nuovo computer.
 3. Eseguire i check e pubblicare l'API:
 
 ```sh
@@ -76,19 +78,39 @@ nel template; configurare solo metriche redatte prima della produzione.
 
 ## 4. Frontend Cloudflare Pages
 
-Creare un progetto Pages chiamato `ultrapad` oppure adattare `deploy:web`.
-In `.env` o nelle variabili della pipeline:
+Il progetto Pages `ultrapad` è già creato, con sito di produzione
+`https://ultrapad-5q2.pages.dev`. La configurazione pubblica è salvata nel
+file **`.env.production` nella radice del repository** (non `.env.productions`).
+Vite la carica automaticamente durante `pnpm build:web`, anche dopo un nuovo
+clone e senza copiare file dal vecchio computer. Il frontend usa:
 
-```dotenv
-VITE_API_URL=https://<worker>.workers.dev
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<chiave-pubblica>
-```
+- API: `https://ultrapad-api.ultrapad-backend.workers.dev`
+- Supabase: `https://iqlxqzfivunyudfaxjlr.supabase.co`
+- La Publishable key del progetto, già presente nel file pubblico.
+
+Su un altro computer, dal checkout `codex/evolutive-v1.3` (o da `main` dopo
+il merge delle PR #2 e #3):
 
 ```sh
+pnpm install --frozen-lockfile
+pnpm exec wrangler login
+pnpm deploy:api
 pnpm build:web
 pnpm deploy:web
 ```
+
+Non ricreare il progetto Pages: il comando `deploy:web` pubblica su `ultrapad`.
+Le variabili PowerShell `$env:VITE_*`, le variabili CI e `.env.production.local`
+possono prevalere sul file committato: rimuovere eventuali vecchi override
+localhost prima della build. `.env.production` contiene esclusivamente dati
+pubblici; token Cloudflare, credenziali OAuth e service role restano fuori Git.
+Il segreto Worker `CHECKPOINT_SERVICE_ROLE` già impostato nel cloud non viene
+sostituito dai deploy e non deve essere copiato nel frontend.
+
+Supabase → Authentication → URL Configuration:
+Site URL `https://ultrapad-5q2.pages.dev`; Redirect URLs
+`https://ultrapad-5q2.pages.dev/` e `http://localhost:5173/` per lo sviluppo.
+Queste impostazioni del servizio non si configurano mediante i file Git.
 
 In alternativa collegare il repository a Pages: root repository, comando
 `pnpm build:web`, output `apps/web/dist`, Node 24 e le tre variabili sopra.

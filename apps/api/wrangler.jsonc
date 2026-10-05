@@ -1,8 +1,8 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "ultrapad-api", "main": "src/index.ts", "compatibility_date": "2026-08-15", "compatibility_flags": ["nodejs_compat"],
+  "name": "ultrapad-api", "account_id": "9b5585ff57c9a4d92f51a58a52a8daf4", "workers_dev": true, "main": "src/index.ts", "compatibility_date": "2026-08-15", "compatibility_flags": ["nodejs_compat"],
   "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "DocumentRoom" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DocumentRoom"] }],
-  "vars": { "APP_ORIGIN": "http://localhost:5173", "SUPABASE_URL": "https://iqlxqzfivunyudfaxjlr.supabase.co", "SUPABASE_ANON_KEY": "sb_publishable_Za6xEJSS-XTUfRXtfl_3Fg_79AVdoKT" },
+  "vars": { "APP_ORIGIN": "https://ultrapad-5q2.pages.dev", "SUPABASE_URL": "https://iqlxqzfivunyudfaxjlr.supabase.co", "SUPABASE_ANON_KEY": "sb_publishable_Za6xEJSS-XTUfRXtfl_3Fg_79AVdoKT" },
   "observability": { "enabled": false }
 }
