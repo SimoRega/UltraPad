@@ -90,3 +90,18 @@ describe('v1.2 formatted documents in native durable storage',()=>{
   expect((await (await stub.fetch('https://room/snapshot')).json() as {serverSeq:number}).serverSeq).toBe(0);ws.close();doc.destroy();
  });
 });
+
+describe('v1.3 authenticated ephemeral presence',()=>{
+ it('reports authenticated sessions across eviction, excludes expired/revoked leases and exposes no tokens',async()=>{
+  const {stub,ws}=await connect();let profiles=await (await stub.fetch('https://room/presence')).json();expect(profiles).toEqual([{id:'editor-user',firstName:'Editor',lastName:'Test',avatar:''}]);
+  await evictDurableObject(stub);expect(await (await stub.fetch('https://room/presence')).json()).toEqual(profiles);
+  await runInDurableObject(stub,(_instance,state)=>{for(const socket of state.getWebSockets()){const lease=socket.deserializeAttachment() as {token:string};lease.token='revoked';socket.serializeAttachment(lease);}});
+  profiles=await (await stub.fetch('https://room/presence')).json();expect(profiles).toEqual([]);ws.close();
+ });
+ it('ignores unauthenticated sockets and expired sessions',async()=>{
+  const {stub,ws}=await connect('viewer');const idle=await stub.fetch(new Request('https://room/ws',{headers:{Upgrade:'websocket'}}));idle.webSocket!.accept();
+  expect(await (await stub.fetch('https://room/presence')).json()).toEqual([{id:'viewer-user',firstName:'Lettore',lastName:'Test',avatar:''}]);
+  await runInDurableObject(stub,(_instance,state)=>{for(const socket of state.getWebSockets()){const lease=socket.deserializeAttachment() as {expiresAt:number};lease.expiresAt=Date.now()-1;socket.serializeAttachment(lease);}});
+  expect(await (await stub.fetch('https://room/presence')).json()).toEqual([]);ws.close();idle.webSocket!.close();
+ });
+});

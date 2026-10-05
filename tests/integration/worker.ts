@@ -2,6 +2,7 @@ import { DocumentRoom } from '../../apps/collaboration/src/room';
 import type { Env } from '../../apps/api/src/db';
 import type { Role } from '../../packages/domain/src/index';
 export class TestRoom extends DocumentRoom {
+  protected async participantProfile(_token:string,userId:string){return {id:userId,firstName:userId==='viewer-user'?'Lettore':'Editor',lastName:'Test',avatar:''};}
   protected async reserveCapacity() {}
   protected async reportActivity() {}
   protected async authorize(token: string, fileId: string, generation: number) {
@@ -30,6 +31,8 @@ export default { async fetch(request: Request, env: Env) {
  } else if(/^\/v1\/files\/.*\/collaboration-ticket$/.test(url.pathname)) {
   const options=await request.json<{document?:boolean}>();const fileId=url.pathname.split('/')[3];const stub=env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`));
   result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify({fileId,generation:1,token:'editor',document:options.document})}));
+ } else if(/^\/v1\/files\/.*\/(presence|snapshot)$/.test(url.pathname)) {
+  const fileId=url.pathname.split('/')[3];result=await env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`)).fetch(`https://room/${url.pathname.split('/').at(-1)}`);
  } else if(url.pathname.startsWith('/ws/')) {
   const [, , fileId, generation]=url.pathname.split('/');
   return env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:${generation}`)).fetch(new Request('https://room/ws',{headers:request.headers}));
