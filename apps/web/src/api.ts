@@ -23,7 +23,7 @@ export async function request<T>(path: string, body?: unknown): Promise<T> {
     if(value.error==='FORBIDDEN') throw new Error('Operazione non consentita al tuo ruolo nel workspace o progetto.');
     if(value.error==='API_UNAVAILABLE') throw new ApiConnectionError();
     if(value.error==='SUPABASE_UNAVAILABLE') throw new Error('Il backend non riesce a collegarsi a Supabase. Controlla URL, rete e configurazione nel terminale API.');
-    if(value.error==='DATABASE_ERROR') throw new Error('Database UltraPad non disponibile. Verifica le tre migrazioni SQL e la configurazione Supabase del backend.');
+    if(value.error==='DATABASE_ERROR') throw new Error('Database UltraPad non disponibile. Verifica le migrazioni SQL (inclusa la 004 per v1.1) e la configurazione Supabase del backend.');
     throw new Error(`${response.status}: ${value.error ?? 'Richiesta non riuscita'}`);
   }
   return value;

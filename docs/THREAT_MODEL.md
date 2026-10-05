@@ -37,3 +37,12 @@ Origine frontend normalizzata; alias loopback ammessi soltanto per HTTP
 locale con stessa porta e configurazione loopback. Il Worker pubblico
 conserva il matching esatto; nessuna wildcard CORS. HTTP e WebSocket
 condividono la policy; l’ammissione dell’origine non autentica l’utente.
+
+V1.1: file personali in contenitori privati con RLS esistente, provisioning
+atomico e divieto di inviti/membri/progetti ulteriori nel contenitore. La
+vecchia RPC interna non è eseguibile direttamente da authenticated. Temi e
+attività richiedono ruolo editor; l'indice attività non autorizza contenuto
+e non costituisce audit affidabile. Temporanei isolati per account in
+sessionStorage, con limiti e segnalazione degli errori; scaricare prima di
+chiudere. Gli strumenti inseriscono solo testo: niente esecuzione HTML o
+linguaggi, e niente credenziali aggiuntive.

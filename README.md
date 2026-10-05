@@ -1,7 +1,7 @@
 # UltraPad
 
 Web app collaborativa per note e codice, implementata a partire dall'SDD
-Atelier Collaborativo. Questo repository sostituisce il prototipo Electron.
+UltraPad. Questo repository sostituisce il prototipo Electron.
 La cronologia Git precedente è conservata.
 
 **Stato: implementazione R1 da validare in staging, non beta certificata.**
@@ -9,6 +9,13 @@ Leggere [progressi e gate aperti](docs/PROGRESS.md) prima di affidarle dati
 importanti. Account esterni e deploy non sono stati eseguiti automaticamente.
 
 ## Funzioni implementate
+
+Versione 1.1: [novità e aggiornamento](docs/V1_1.md).
+
+- Home a tutto schermo con lavori recenti, modifiche del team e gruppi per tema.
+- File singoli privati nel DB; temporanei della scheda esportabili e salvabili nel DB.
+- Temi bianco/nero, colore principale personalizzato e Monaco coerente.
+- Strumenti dedicati a TXT, MD, JSON, XML, HTML, CSS, JS, TS, Java, C#, Python, TEX e BIB.
 
 - OAuth GitHub tramite Supabase, workspace, progetti, cartelle e file.
 - Monaco con linguaggi testuali, ricerca, word wrap, tab, download.

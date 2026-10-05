@@ -1,4 +1,4 @@
-# Atelier Collaborativo
+# UltraPad
 
 ## Software Design Document per lo sviluppo con Codex
 
@@ -6,7 +6,7 @@
 **Data:** 2 ottobre 2026  
 **Committente:** Simone Rega  
 **Stato:** proposta implementabile; nessun servizio o account provisionato  
-**Nome di lavoro:** Atelier; da verificare prima dell'uso pubblico  
+**Nome di lavoro:** UltraPad; da verificare prima dell'uso pubblico  
 **Lingua dell'interfaccia iniziale:** italiano, con infrastruttura per inglese  
 **Destinatari:** Codex, sviluppatore responsabile, futuri collaboratori tecnici
 
@@ -59,7 +59,7 @@ L'architettura proposta usa React e TypeScript nel browser, Yjs per la collabora
 
 Uno sviluppatore o studente passa spesso tra editor di codice, app per note, documenti condivisi, lavagne e strumenti per compilare una tesi. File e discussioni vengono duplicati, i collegamenti perdono contesto e non è chiaro quale versione sia stata usata per produrre un risultato.
 
-Atelier riunisce questi lavori nello stesso progetto. L'utente può collegare una nota a un file Java, inserire entrambi nella lavagna, discutere una porzione di testo e generare un output da una revisione identificabile. La metafora di Discord riguarda spazi, membri e presenza; non implica riprodurne chat vocale, streaming o infrastruttura multimediale.
+UltraPad riunisce questi lavori nello stesso progetto. L'utente può collegare una nota a un file Java, inserire entrambi nella lavagna, discutere una porzione di testo e generare un output da una revisione identificabile. La metafora di Discord riguarda spazi, membri e presenza; non implica riprodurne chat vocale, streaming o infrastruttura multimediale.
 
 ### 1.2 Differenziazione proposta
 
@@ -69,7 +69,7 @@ Le funzioni distintive sono ipotesi di prodotto, da validare con utenti reali:
 - **Scrittura e codice nello stesso contesto:** editor specializzati, permessi comuni, commenti ancorati e versioni navigabili.
 - **Progetti riproducibili:** un'esecuzione o un PDF dichiara le revisioni sorgente, il runtime e gli asset usati.
 - **Percorso per una tesi:** capitoli, formule, bibliografia e allegati collegati al progetto.
-- **Portabilità:** esportazione dei file sorgente e di un manifesto aperto, senza richiedere Atelier per leggerli.
+- **Portabilità:** esportazione dei file sorgente e di un manifesto aperto, senza richiedere UltraPad per leggerli.
 - **Collaborazione con recupero:** si distingue ciò che è salvato localmente da ciò che il server ha confermato.
 
 Non si assume che l'app sia nuova sul mercato solo per questa combinazione. Prima di investire in funzioni costose, testare se riduce concretamente il passaggio tra strumenti.
@@ -264,7 +264,7 @@ Il provider edge è una parte specialistica da implementare e verificare. Le pri
 
 ```mermaid
 flowchart TD
-    UI[Browser Atelier] --> API[API Worker]
+    UI[Browser UltraPad] --> API[API Worker]
     UI --> ROOM[Room Durable Object]
     API --> AUTH[Supabase Auth]
     API --> PG[Postgres metadati]
@@ -674,7 +674,7 @@ Rimozione nodo e archi collegati nella stessa transazione applicativa. Un arco c
 
 ### 15.3 Collegamenti tra risorse
 
-`atelier://file/{uuid}` è una rappresentazione interna serializzata, mentre la navigazione browser usa URL HTTPS dell'app. La risoluzione verifica sempre i permessi correnti. La scheda non espone il titolo di un file non autorizzato. Il testo visualizzato si aggiorna dopo rename; cancellazione mostra un placeholder.
+`ultrapad://file/{uuid}` è una rappresentazione interna serializzata, mentre la navigazione browser usa URL HTTPS dell'app. La risoluzione verifica sempre i permessi correnti. La scheda non espone il titolo di un file non autorizzato. Il testo visualizzato si aggiorna dopo rename; cancellazione mostra un placeholder.
 
 In R1/R2 collegamenti fra progetti o workspace diversi sono vietati. L'indice backlink deriva da link validati nel modello. Fornire una vista elenco dei nodi e delle relazioni per tastiera e screen reader.
 
@@ -766,7 +766,7 @@ Esempio manifesto:
 
 ```json
 {
-  "format": "atelier-project",
+  "format": "ultrapad-project",
   "version": 1,
   "snapshotMode": "per-file-cut",
   "projectId": "UUID",
@@ -1115,7 +1115,7 @@ Prima della release R1 bloccare aggiunte P2 non necessarie. Le funzioni future p
 ## 27 Struttura del repository
 
 ```text
-atelier/
+ultrapad/
   apps/
     web/
       src/
@@ -1227,7 +1227,7 @@ Prima di una beta pubblica chiarire: pubblico target principale; budget massimo 
 
 ```text
 Leggi docs/SDD.md interamente e gli eventuali AGENTS.md del repository.
-Devi implementare Atelier Collaborativo seguendo questo SDD.
+Devi implementare UltraPad seguendo questo SDD.
 
 Obiettivo corrente: M0, poi M1-M3 fino alla release R1.
 Non implementare tutte le milestone contemporaneamente.

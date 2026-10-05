@@ -3,6 +3,7 @@ import type { Env } from '../../apps/api/src/db';
 import type { Role } from '../../packages/domain/src/index';
 export class TestRoom extends DocumentRoom {
   protected async reserveCapacity() {}
+  protected async reportActivity() {}
   protected async authorize(token: string, fileId: string, generation: number) {
     if (token === 'revoked') throw new Error('ACCESS_CHANGED');
     return { file: { id: fileId, generation }, userId: token === 'viewer' ? 'viewer-user' : 'editor-user', role: (token === 'viewer' ? 'viewer' : 'editor') as Role, expiresAt: Date.now()+3600000 };
@@ -22,6 +23,8 @@ export default { async fetch(request: Request, env: Env) {
   result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify(body)}));
  } else if(url.pathname==='/v1/bootstrap') {
   result=Response.json({workspaces:[{id:'10000000-0000-4000-8000-000000000001',name:'Test workspace',owner_id:'00000000-0000-4000-8000-000000000001'}],projects:[{id:'20000000-0000-4000-8000-000000000001',workspace_id:'10000000-0000-4000-8000-000000000001',name:'Progetto di test',role:'owner'}]});
+ } else if(url.pathname==='/v1/dashboard') {
+  result=Response.json([{id:'30000000-0000-4000-8000-000000000001',project_id:'20000000-0000-4000-8000-000000000001',workspace_id:'10000000-0000-4000-8000-000000000001',name:'idee.md',kind:'text',parent_id:null,generation:1,language:'markdown',metadata_version:1,status:'ready',theme:'Ricerca',updated_at:'2026-10-05T10:00:00Z',last_modified_by:'00000000-0000-4000-8000-000000000002'}]);
  } else if(/^\/v1\/projects\/.*\/files$/.test(url.pathname)) {
   result=Response.json([{id:'30000000-0000-4000-8000-000000000001',project_id:'20000000-0000-4000-8000-000000000001',workspace_id:'10000000-0000-4000-8000-000000000001',name:'idee.md',kind:'text',parent_id:null,generation:1,language:'markdown',metadata_version:1,status:'ready'}]);
  } else if(/^\/v1\/files\/.*\/collaboration-ticket$/.test(url.pathname)) {

@@ -43,11 +43,15 @@ app.get('/v1/projects/:id/members', async c => {
   const { data, error } = await database(c.env, c.get('token')).from('project_members').select('user_id,role').eq('project_id', id.parse(c.req.param('id')));
   if (error) throw new Error('DATABASE_ERROR'); return c.json(data);
 });
-const operation = z.enum(['create_workspace','delete_workspace','create_project','delete_project','create_file','rename_file','move_file','delete_file','set_member']);
+app.get('/v1/dashboard', async c => {
+  const {data,error}=await database(c.env,c.get('token')).from('files').select('*').eq('kind','text').order('updated_at',{ascending:false}).limit(100);
+  if(error)throw new Error('DATABASE_ERROR');return c.json(data);
+});
+const operation = z.enum(['create_standalone','set_theme','create_workspace','delete_workspace','create_project','delete_project','create_file','rename_file','move_file','delete_file','set_member']);
 app.post('/v1/mutations', async c => {
   const { op, args } = z.object({ op: operation, args: z.record(z.string(), z.unknown()) }).parse(await c.req.json());
   if ('name' in args) args.name = validateName(z.string().parse(args.name));
-  if (op === 'create_file' || op === 'rename_file') args.language = languageFor(String(args.name));
+  if (op === 'create_file' || op === 'create_standalone' || op === 'rename_file') args.language = languageFor(String(args.name));
   const db = database(c.env, c.get('token'));
   const before = op === 'delete_file' ? await db.from('files').select('id,generation').eq('id', String(args.id)) : null;
   const projectFiles = ['set_member','delete_project'].includes(op) ? await db.from('files').select('id,generation').eq('project_id', String(args.project_id)) : null;

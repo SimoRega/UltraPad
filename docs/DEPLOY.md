@@ -13,7 +13,7 @@ due file locali con URL corretto e chiave pubblica inserita sul PC.
 
 1. Creare un progetto Supabase separato per staging. Annotare URL e chiave
    pubblicabile/anon; non usare la service role nel frontend.
-2. Applicare, in ordine, i tre file `supabase/migrations/20261005000*.sql` con
+2. Applicare, in ordine, i quattro file `supabase/migrations/20261005000*.sql` con
    SQL Editor o migrazioni CLI. Richiedono lo schema Auth/Storage Supabase.
 3. Creare un'app OAuth GitHub con callback
    `https://<project-ref>.supabase.co/auth/v1/callback`.
@@ -123,3 +123,8 @@ compaction oppure adottare Workers Paid/Hocuspocus tramite ADR.
 
 Fonti ufficiali consultate: Cloudflare Durable Objects Storage/WebSockets,
 Supabase getClaims/RLS, Monaco Editor/y-monaco; link in DEPENDENCIES.md.
+
+## Aggiornamento dalla v1 alla v1.1
+
+Seguire [V1_1.md](V1_1.md). Su un DB già inizializzato applicare soltanto
+`202610050004_v11.sql`, senza rieseguire 001–003. Nessun reset dei dati.

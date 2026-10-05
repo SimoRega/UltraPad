@@ -1,7 +1,8 @@
 # UltraPad
 
 Leggi docs/SDD.md, docs/PROGRESS.md e gli ADR prima di modificare il progetto.
-Scope corrente: completare i gate di release R1; M4–M8 restano separati.
+Scope corrente: v1.1 (home, file personali/temporanei, temi e strumenti testuali)
+e gate di release R1; M4–M8 restano separati.
 Nessuna persistenza o autorizzazione fittizia nel codice di produzione.
 TestRoom e JWT sintetici esistono solo in tests/, mai nel bundle produttivo.
 Non loggare JWT, ticket, sorgenti, email invito o credenziali.

@@ -23,7 +23,7 @@ export async function exportProject(projectId: string, files: FileRecord[]) {
     if (visited.has(f.id)) throw new Error('Albero non valido'); visited.add(f.id);
     return f.parent_id && byId.has(f.parent_id) ? `${path(byId.get(f.parent_id)!, visited)}/${f.name}` : f.name;
   }
-  const manifest = { format: 'atelier-project', version: 1, snapshotMode: 'per-file-cut', projectId, createdAt: new Date().toISOString(), files: [] as unknown[] };
+  const manifest = { format: 'ultrapad-project', version: 1, snapshotMode: 'per-file-cut', projectId, createdAt: new Date().toISOString(), files: [] as unknown[] };
   for (const file of files) {
     const name = `files/${path(file)}`;
     if (file.kind === 'folder') { zip.folder(name); continue; }

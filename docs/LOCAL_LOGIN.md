@@ -33,11 +33,15 @@ Se esistono `.env.local` o `.env.development*`, verificarli: prevalgono su `.env
 ## 2. Applicare il database
 
 Il collegamento del repo non garantisce l'esecuzione delle migrazioni.
-Nel SQL Editor Supabase eseguire, in ordine, i tre file:
+Nel SQL Editor Supabase eseguire, in ordine, i quattro file:
 
 1. `supabase/migrations/202610050001_core.sql`
 2. `supabase/migrations/202610050002_checkpoints.sql`
 3. `supabase/migrations/202610050003_quotas.sql`
+4. `supabase/migrations/202610050004_v11.sql`
+
+Per aggiornare una v1 già funzionante applica soltanto il file 004;
+vedi [V1_1.md](V1_1.md).
 
 Se già applicati, non rieseguirli alla cieca: controllare lo storico migrazioni
 e le tabelle. Dopo il primo login l'app mostra un workspace vuoto da creare;

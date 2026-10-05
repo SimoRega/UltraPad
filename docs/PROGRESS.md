@@ -2,8 +2,8 @@
 
 Il prototipo Electron è sostituito dall'implementazione web M0–M3/R1 prevista
 dall'SDD. La cronologia precedente resta recuperabile in Git. Questo è codice
-da validare in staging: **R1 non è ancora certificata e non è stato effettuato
-un deploy**. L'SDD completo è conservato in `docs/SDD.md`.
+da validare in staging: **R1 non è ancora certificata per staging/produzione e non è stato effettuato
+un deploy da questa sessione**. L'SDD completo è conservato in `docs/SDD.md`.
 
 ## Realizzato
 
@@ -27,9 +27,9 @@ un deploy**. L'SDD completo è conservato in `docs/SDD.md`.
 | Verifica | Esito |
 |---|---|
 | TypeScript strict e lint | Passati |
-| Test dominio/protocollo + PostgreSQL PGlite | 10 passati |
+| Test dominio/protocollo, presentazione + PostgreSQL PGlite | 13 passati |
 | Test workerd/SQLite/Durable Objects | 14 passati |
-| Playwright Chromium | 9 passati |
+| Playwright Chromium | 18 passati |
 | Setup locale Node | 3 passati |
 | Build frontend + dry run Worker | Passati |
 | Audit dipendenze | Nessun advisory rilevato al controllo |
@@ -147,3 +147,32 @@ Verifiche di questo aggiornamento: typecheck e lint passati, build frontend
 e dry run Worker passati, 10 test unit/PostgreSQL, 14 integrazione, 3 setup
 e 9 browser passati (36 totali). Il browser aggiuntivo verifica che ORIGIN
 indichi l’indirizzo configurato; i test RLS/viewer restano attivi.
+
+## V1.1 — home, file singoli, temporanei, temi e strumenti
+
+Il proprietario ha confermato login reale, DB e funzioni base della v1 sul
+suo PC. Implementata la richiesta v1.1 con branding UltraPad, home a piena
+area con recenti/ultima modifica/team/temi, progetti e ricerca; file personali
+nel DB senza provisioning manuale e temporanei nella scheda con promozione
+al DB e copia di recupero conservata. Aspetto con superfici e bordi smussati,
+bianco/nero, palette e colore principale; tema condiviso con Monaco.
+Barre specifiche per tutti i 13 formati R1, fallback testo, undo/redo,
+formatter incorporati e verifica JSON/XML. Nessun rich text/Office/runner.
+
+Migrazione 004 additiva: flag personali, indice attività e temi; RPC atomica
+per file singoli, blocco condivisione e progetti nel contenitore personale,
+revoca della RPC interna, ruoli/RLS conservati. Aggiornamento indice dopo ACK
+durevole best effort; non è una nuova autorità di contenuto né un audit log.
+Vecchi eventi non ricostruiti. ADR 0003 e guida V1_1.md documentano scelte,
+limiti (100 file home, 20 recenti, temporanei fino a chiusura scheda) e upgrade
+con sola 004 su v1. Il service worker rinnova la cache della shell per v1.1.
+
+Verifiche: typecheck, lint, build e dry run Worker passati; 13 unit/PostgreSQL,
+14 integrazione workerd, 3 setup e 18 browser (48 totali). Browser verificano
+la home, filtro team/tema, errore/retry API, temporanei senza mutation e dopo
+reload, creazione singolo, promozione al DB con ACK e reload, recupero della
+copia temporanea, temi pagina/Monaco con persistenza, undo collaborativo,
+viewer read-only, JSON e mobile senza overflow. SQL verifica privacy,
+provisioning atomico e rollback, temi, sequence/generation e blocco bypass
+condivisione. Le fixture non certificano la migrazione nel progetto remoto:
+il proprietario deve applicare 004 prima di usare questa release.

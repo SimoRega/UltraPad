@@ -9,6 +9,7 @@ una cache; il server ricontrolla sempre i permessi.
 | Metodo e percorso | Effetto |
 |---|---|
 | GET /health | diagnostica configurazione, nessun segreto |
+| GET /v1/dashboard | fino a 100 file testuali autorizzati, ultima modifica decrescente |
 | GET /v1/bootstrap | workspace e progetti autorizzati con ruolo |
 | GET /v1/projects/:id/files | albero metadati autorizzato |
 | GET /v1/projects/:id/members | grant di progetto |
@@ -26,7 +27,11 @@ una cache; il server ricontrolla sempre i permessi.
 | GET /v1/files/:id/backup-health | configurazione e ultimo stato della copia |
 
 Operazioni: create/delete_workspace, create/delete_project, create_file,
-rename_file, move_file, delete_file, set_member. Rename/move richiedono
+rename_file, move_file, delete_file, set_member, create_standalone, set_theme.
+create_standalone richiede `{name}` e restituisce FileRecord con project_id;
+set_theme richiede `{kind: "file" | "project", id, theme}` (max 60 caratteri),
+con almeno ruolo editor. Il testo temporaneo resta solo nel browser.
+Rename/move richiedono
 `metadata_version`, nel file, per evitare overwrite di metadati obsoleti.
 
 WebSocket usa frame binari con header JSON UTF-8, lunghezza uint32 big endian

@@ -35,4 +35,4 @@ export function join(parts: Uint8Array[]): Uint8Array {
   const result = new Uint8Array(size); let at = 0;
   for (const p of parts) { result.set(p, at); at += p.length; } return result;
 }
-export type FileRecord = { id: string; project_id: string; workspace_id: string; parent_id: string | null; name: string; kind: 'text' | 'folder'; generation: number; language: string; metadata_version: number; status: string };
+export type FileRecord = { id: string; project_id: string; workspace_id: string; parent_id: string | null; name: string; kind: 'text' | 'folder'; generation: number; language: string; metadata_version: number; status: string; theme?: string; updated_at?: string; last_modified_by?: string | null; created_at?: string };

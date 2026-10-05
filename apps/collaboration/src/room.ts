@@ -30,6 +30,10 @@ export class DocumentRoom extends DurableObject<Env> {
     const {error}=await database(this.env,token).rpc('reserve_document_bytes',{fid:fileId,gen:generation,n:bytes});
     if(error)throw new Error(error.message.includes('QUOTA')?'WORKSPACE_QUOTA':'ACCESS_CHANGED');
   }
+  protected async reportActivity(token:string,fileId:string,generation:number,seq:number) {
+    const {error}=await database(this.env,token).rpc('record_file_activity',{fid:fileId,gen:generation,seq});
+    if(error)throw new Error('ACTIVITY_INDEX_FAILED');
+  }
   private enqueue<T>(work: () => Promise<T>): Promise<T> {
     const next = this.serial.then(work, work); this.serial = next.catch(() => undefined); return next;
   }
@@ -177,6 +181,7 @@ export class DocumentRoom extends DurableObject<Env> {
       this.doc.destroy(); this.doc = next; this.seq = seq;
       await this.ctx.storage.setAlarm(Date.now() + 10_000);
       this.send(ws, { type: 'ack', updateId: header.updateId, generation: this.generation, serverSeq: seq });
+      this.ctx.waitUntil(this.reportActivity(lease.token,this.fileId,this.generation,seq).catch(()=>undefined));
       const parts = chunks(update); const transferId = crypto.randomUUID();
       parts.forEach((part, index) => this.broadcast({ type: 'remote-update', transferId, part: index, total: parts.length, serverSeq: seq }, part, ws));
     }).catch(e => { this.send(ws, { type: 'error', code: e instanceof Error ? e.message : 'ROOM_ERROR', retryable: false }); ws.close(4003, 'Sincronizzazione interrotta'); });
