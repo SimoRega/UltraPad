@@ -9,6 +9,9 @@ Per il progetto UltraPad già creato (`iqlxqzfivunyudfaxjlr`) e l’avvio Window
 seguire prima [LOCAL_LOGIN.md](LOCAL_LOGIN.md). `pnpm setup:local` configura i
 due file locali con URL corretto e chiave pubblica inserita sul PC.
 
+Per la login Google della v1.5 seguire [V1_5.md](V1_5.md): Client ID/Secret
+restano nel provider Supabase, senza modifiche al database.
+
 ## 1. Supabase e OAuth
 
 1. Creare un progetto Supabase separato per staging. Annotare URL e chiave
