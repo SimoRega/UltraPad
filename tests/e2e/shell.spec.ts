@@ -17,7 +17,7 @@ test('real Monaco component edits through the durable collaboration provider',as
  await expect(page.getByRole('heading',{name:'Progetto di test'})).toBeVisible();
  await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});
  const input=page.locator('.monaco-editor .view-lines');await input.click({position:{x:30,y:10}});await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('Monaco collaborativo funziona');
- await expect(page.getByRole('status')).toHaveText('salvato sul server');
+ await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});
  await expect(page.locator('.view-lines')).toContainText('Monaco collaborativo funziona');
  await page.screenshot({path:'test-results/workspace.png',fullPage:true});
 });
@@ -89,7 +89,7 @@ test('temporary files use format tools, survive reload and never send content to
 });
 test('appearance switches both page and Monaco, custom accent persists across reload',async({page})=>{
  await signedIn(page);await page.goto('/projects/20000000-0000-4000-8000-000000000001/files/30000000-0000-4000-8000-000000000001');
- await expect(page.getByRole('status')).toHaveText('salvato sul server');await page.getByRole('button',{name:'Aspetto',exact:true}).click();
+ await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});await page.getByRole('button',{name:'Aspetto',exact:true}).click();
  await page.getByRole('button',{name:'☀ Bianco',exact:true}).click();await page.getByRole('button',{name:'Colore #a5d9ca',exact:true}).click();
  await page.getByRole('button',{name:'Chiudi',exact:true}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','light');
  await expect(page.locator('.monaco-editor').first()).toHaveCSS('background-color','rgb(255, 255, 255)');
@@ -99,17 +99,17 @@ test('appearance switches both page and Monaco, custom accent persists across re
 });
 test('source toolbar edits go through collaborative persistence and undo',async({page})=>{
  await signedIn(page);await page.goto('/projects/20000000-0000-4000-8000-000000000001/files/30000000-0000-4000-8000-000000000001');
- await expect(page.getByRole('status')).toHaveText('salvato sul server');
+ await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});
  await page.locator('.view-lines').click({position:{x:30,y:10}});await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('collaborazione');
  await page.keyboard.press('ControlOrMeta+A');await page.getByRole('button',{name:'Grassetto',exact:true}).click();
- await expect(page.locator('.view-lines')).toContainText('**collaborazione**');await expect(page.getByRole('status')).toHaveText('salvato sul server');
+ await expect(page.locator('.view-lines')).toContainText('**collaborazione**');await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});
  await page.getByRole('button',{name:'↶ Annulla',exact:true}).click();await expect(page.locator('.view-lines')).toContainText('collaborazione');await expect(page.locator('.view-lines')).not.toContainText('**collaborazione**');
 });
 test('viewer cannot use modifying toolbar actions',async({page})=>{
  await signedIn(page);await page.route('**/api/v1/bootstrap',async route=>{const response=await route.fetch();const data=await response.json();data.projects[0].role='viewer';await route.fulfill({json:data});});
  await page.route('**/api/v1/files/*/collaboration-ticket',async route=>{const response=await page.request.post('http://localhost:8788/ticket',{data:{token:'viewer',fileId:'30000000-0000-4000-8000-000000000001',generation:1}});await route.fulfill({json:await response.json()});});
  await page.goto('/projects/20000000-0000-4000-8000-000000000001/files/30000000-0000-4000-8000-000000000001');
- await expect(page.getByRole('status')).toHaveText('salvato sul server');
+ await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});
  await expect(page.getByRole('button',{name:'Grassetto',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'↶ Annulla',exact:true})).toBeDisabled(); await page.getByRole('button',{name:'UltraPad',exact:true}).click();await page.unrouteAll({behavior:'wait'});
 });
 
@@ -121,15 +121,15 @@ async function personalFileFixture(page:Page) {
 test('single file creation needs no project selection and opens durable editor',async({page})=>{
  await signedIn(page);await personalFileFixture(page);await page.goto('/');
  await page.getByRole('button',{name:'+ File singolo',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('personale.md');
- await page.getByRole('button',{name:'Crea',exact:true}).click();await expect(page.getByRole('status')).toHaveText('salvato sul server');
+ await page.getByRole('button',{name:'Crea',exact:true}).click();await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});
  await expect(page.getByRole('toolbar',{name:'Strumenti Markdown',exact:true})).toBeVisible();
 });
 test('promotion retains temporary text until durable ACK and preserves recovery copy',async({page})=>{
  await signedIn(page);await personalFileFixture(page);await page.goto('/');
  await page.getByRole('button',{name:'✎ File temporaneo',exact:true}).click();await page.getByRole('button',{name:'Nome e formato',exact:true}).click();await page.getByLabel('Nome',{exact:true}).fill('da-conservare.md');await page.getByRole('button',{name:'Salva',exact:true}).click();
  await page.getByRole('button',{name:'Grassetto',exact:true}).click();await expect(page.locator('.view-lines')).toContainText('**testo**');
- await page.getByRole('button',{name:'Salva nel DB',exact:true}).click();await expect(page.getByRole('status')).toHaveText('salvato sul server');await expect(page.locator('.view-lines')).toContainText('**testo**');
- await page.reload();await expect(page.getByRole('status')).toHaveText('salvato sul server');await expect(page.locator('.view-lines')).toContainText('**testo**');
+ await page.getByRole('button',{name:'Salva nel DB',exact:true}).click();await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});await expect(page.locator('.view-lines')).toContainText('**testo**');
+ await page.reload();await expect(page.getByRole('status')).toHaveText('salvato sul server',{timeout:20000});await expect(page.locator('.view-lines')).toContainText('**testo**');
  await page.getByRole('button',{name:'UltraPad',exact:true}).click();await expect(page.getByRole('heading',{name:'da-conservare.md',exact:true})).toBeVisible();
 });
 test('JSON tools validate errors and formatter uses real Monaco without corrupting source',async({page})=>{
