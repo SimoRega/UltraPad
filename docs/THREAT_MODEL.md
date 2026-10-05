@@ -32,3 +32,8 @@ room/oggetti orfani e key rotation del publisher. Il rate limite room è
 protezione anti-abuso sufficiente per un servizio pubblico.
 
 Non abilitare utenti sconosciuti prima dei gate operativi e di sicurezza.
+
+Origine frontend normalizzata; alias loopback ammessi soltanto per HTTP
+locale con stessa porta e configurazione loopback. Il Worker pubblico
+conserva il matching esatto; nessuna wildcard CORS. HTTP e WebSocket
+condividono la policy; l’ammissione dell’origine non autentica l’utente.

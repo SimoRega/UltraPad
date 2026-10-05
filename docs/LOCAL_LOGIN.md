@@ -66,7 +66,9 @@ In Authentication → URL Configuration:
 | Redirect URLs | `http://localhost:5173/` |
 
 L'app torna alla root con slash terminale. Usare `localhost:5173`, non
-`127.0.0.1:5173`; host e porta devono coincidere con i redirect autorizzati.
+`127.0.0.1:5173`; host e porta devono coincidere con i redirect autorizzati. Per le API e i
+WebSocket locali gli alias loopback sulla stessa porta sono accettati; questa
+compatibilità non aggiunge automaticamente redirect OAuth a Supabase.
 Quando si pubblica, aggiornare Site URL e aggiungere gli URL HTTPS previsti.
 
 ## 4. Verificare e avviare
@@ -87,6 +89,17 @@ Se 5173 è occupata Vite si ferma: non cambia porta silenziosamente.
 Per fermare i servizi: Ctrl+C.
 
 ## Se non funziona
+
+- `403: ORIGIN` / origine della pagina non consentita: il backend ha rifiutato
+  l'host della pagina prima dei permessi. Per development impostare
+  `APP_ORIGIN=http://localhost:5173` in `apps/api/.dev.vars`, riavviare i servizi
+  e aprire http://localhost:5173/. Il nuovo codice tollera lo slash finale e
+  gli alias loopback locali sulla stessa porta. Domini esterni e porte diverse
+  restano rifiutati. La risposta ORIGIN indica l'origine attesa.
+- `403: FORBIDDEN` / operazione non consentita al ruolo: è un controllo ACL
+  distinto da Origin. Usare il workspace corretto e un account con ruolo
+  editor/admin richiesto. Non usare chiavi privilegiate per aggirare i ruoli.
+
 
 - `Unsupported provider`: abilitare GitHub in Supabase Auth, non nelle
   integrazioni del repository.

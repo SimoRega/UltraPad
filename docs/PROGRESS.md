@@ -28,8 +28,8 @@ un deploy**. L'SDD completo è conservato in `docs/SDD.md`.
 |---|---|
 | TypeScript strict e lint | Passati |
 | Test dominio/protocollo + PostgreSQL PGlite | 10 passati |
-| Test workerd/SQLite/Durable Objects | 9 passati |
-| Playwright Chromium | 8 passati |
+| Test workerd/SQLite/Durable Objects | 14 passati |
+| Playwright Chromium | 9 passati |
 | Setup locale Node | 3 passati |
 | Build frontend + dry run Worker | Passati |
 | Audit dipendenze | Nessun advisory rilevato al controllo |
@@ -127,3 +127,23 @@ health Worker diretto e attraverso Vite entrambi HTTP 200, configured true.
 Bootstrap senza JWT attraverso il proxy HTTP 401, quindi il trasporto non
 aggira l’autenticazione. Non è stata eseguita una mutazione sul database
 remoto perché non è disponibile una sessione JWT del proprietario.
+
+## Correzione 403 sulle mutazioni
+
+Il log del proprietario mostra POST /v1/mutations 403 (9 ms), senza corpo
+JSON: non identifica da solo ORIGIN o FORBIDDEN. Riprodotto il rifiuto
+prima dell'autenticazione per APP_ORIGIN con slash finale o host loopback
+diverso da quello della pagina. Normalizzata l'origine, applicata policy
+comune HTTP/WS con alias esclusivamente locali sulla stessa porta.
+Aggiunti messaggi distinti per ORIGIN e FORBIDDEN e origine attesa nella
+risposta ORIGIN; nessuna rimozione di controlli JWT, ruoli o RLS.
+
+Verificati localhost/IPv4/IPv6 locali, preflight, alias senza JWT (401),
+WebSocket upgrade, slash finale, produzione esatta e rifiuto di dominio
+esterno, porta/protocollo diversi e alias su un Worker pubblico. La verifica
+sulla macchina Windows del proprietario resta da effettuare dopo aggiornamento.
+
+Verifiche di questo aggiornamento: typecheck e lint passati, build frontend
+e dry run Worker passati, 10 test unit/PostgreSQL, 14 integrazione, 3 setup
+e 9 browser passati (36 totali). Il browser aggiuntivo verifica che ORIGIN
+indichi l’indirizzo configurato; i test RLS/viewer restano attivi.

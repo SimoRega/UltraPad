@@ -60,3 +60,11 @@ for(const mode of ['network','unavailable'] as const) test(`API ${mode} failure 
  await page.getByRole('button',{name:'Riprova',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Test workspace'})).toBeVisible();
 });
+
+test('origin rejection explains the configured frontend address',async({page})=>{
+ await signedIn(page);
+ await page.route('**/api/v1/bootstrap',route=>route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({error:'ORIGIN',expectedOrigin:'http://localhost:5173'})}));
+ await page.goto('/');
+ await expect(page.getByRole('alert')).toContainText('Origine della pagina non consentita');
+ await expect(page.getByRole('alert')).toContainText('http://localhost:5173');
+});

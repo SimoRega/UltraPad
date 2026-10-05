@@ -15,10 +15,12 @@ export async function request<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   try { response=await fetch(`${apiUrl}/v1${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal:AbortSignal.timeout(30000) }); }
   catch { throw new ApiConnectionError(); }
-  let value: T & {error?:string};
-  try { value=await response.json() as T & {error?:string}; }
+  let value: T & {error?:string;expectedOrigin?:string};
+  try { value=await response.json() as T & {error?:string;expectedOrigin?:string}; }
   catch { if([500,502,503,504].includes(response.status)) throw new ApiConnectionError(); throw new Error('Risposta API non valida. Verifica VITE_API_URL: deve puntare al backend UltraPad, non alla Data API Supabase.'); }
   if (!response.ok) {
+    if(value.error==='ORIGIN') throw new Error(`Origine della pagina non consentita dal backend. Apri ${value.expectedOrigin ?? 'l’indirizzo configurato in APP_ORIGIN'} e verifica APP_ORIGIN in apps/api/.dev.vars.`);
+    if(value.error==='FORBIDDEN') throw new Error('Operazione non consentita al tuo ruolo nel workspace o progetto.');
     if(value.error==='API_UNAVAILABLE') throw new ApiConnectionError();
     if(value.error==='SUPABASE_UNAVAILABLE') throw new Error('Il backend non riesce a collegarsi a Supabase. Controlla URL, rete e configurazione nel terminale API.');
     if(value.error==='DATABASE_ERROR') throw new Error('Database UltraPad non disponibile. Verifica le tre migrazioni SQL e la configurazione Supabase del backend.');

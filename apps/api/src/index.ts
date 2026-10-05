@@ -5,20 +5,23 @@ import { cors } from 'hono/cors';
 import { z } from 'zod';
 import * as Y from 'yjs';
 import { database, identity, room, access, type Env } from './db';
+import { configuredOrigin, originAllowed } from './origin';
 import { canAdmin, canEdit, sha256, validateName, languageFor } from '../../../packages/domain/src/index';
 import { id, roleSchema } from '../../../packages/contracts/src/index';
 export { DocumentRoom } from '../../collaboration/src/room';
 const app = new Hono<{ Bindings: Env; Variables: { token: string } }>();
 app.use('*', async (c, next) => {
   c.header('Referrer-Policy', 'no-referrer'); c.header('X-Content-Type-Options', 'nosniff'); c.header('Cache-Control', 'no-store');
-  if (c.req.header('Origin') && c.req.header('Origin') !== c.env.APP_ORIGIN) return c.json({ error: 'ORIGIN' }, 403);
-  return cors({ origin: c.env.APP_ORIGIN, allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })(c, next);
+  const expected=configuredOrigin(c.env.APP_ORIGIN);const received=c.req.header('Origin');
+  if(!expected)return c.json({error:'CONFIGURATION_REQUIRED'},503);
+  if (!originAllowed(c.env.APP_ORIGIN,received,c.req.url)) return c.json({ error: 'ORIGIN', expectedOrigin:expected }, 403);
+  return cors({ origin: received ?? expected, allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })(c, next);
 });
 app.use('/v1/*',bodyLimit({maxSize:64*1024,onError:c=>c.json({error:'REQUEST_TOO_LARGE'},413)}));
 app.get('/health', c => c.json({ service: 'ultrapad', configured: Boolean(c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) }));
 app.get('/ws/:fileId/:generation', c => {
   id.parse(c.req.param('fileId')); const generation = z.coerce.number().int().positive().parse(c.req.param('generation'));
-  if (c.req.header('Upgrade') !== 'websocket' || c.req.header('Origin') !== c.env.APP_ORIGIN) return c.json({ error: 'UPGRADE_REQUIRED' }, 403);
+  if (c.req.header('Upgrade') !== 'websocket' || !c.req.header('Origin') || !originAllowed(c.env.APP_ORIGIN,c.req.header('Origin'),c.req.url)) return c.json({ error: 'UPGRADE_REQUIRED' }, 403);
   return room(c.env, c.req.param('fileId'), generation).fetch(new Request('https://room/ws', { headers: c.req.raw.headers }));
 });
 app.use('/v1/*', async (c, next) => {
@@ -57,7 +60,7 @@ app.post('/v1/projects/:id/invitations', async c => {
   const token = crypto.randomUUID() + crypto.randomUUID();
   const { data, error } = await database(c.env, c.get('token')).rpc('mutate', { op: 'create_invite', args: { ...args, project_id: id.parse(c.req.param('id')), token_hash: await sha256(new TextEncoder().encode(token)) } });
   if (error) throw new Error(error.message);
-  return c.json({ ...data, url: `${c.env.APP_ORIGIN}/#invite=${token}` });
+  return c.json({ ...data, url: `${configuredOrigin(c.env.APP_ORIGIN)}/#invite=${token}` });
 });
 app.post('/v1/invitations/accept', async c => {
   const { token } = z.object({ token: z.string().length(72) }).parse(await c.req.json());

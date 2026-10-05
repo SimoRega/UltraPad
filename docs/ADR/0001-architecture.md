@@ -34,3 +34,17 @@ di POST, perché una disconnessione può avvenire dopo un commit remoto.
 Il timeout HTTP non garantisce che una mutazione non sia stata applicata.
 Fonti: https://vite.dev/config/server-options e
 https://developers.cloudflare.com/workers/wrangler/commands/workers/
+
+## Origini loopback in sviluppo
+
+APP_ORIGIN viene normalizzata con URL.origin per evitare il rifiuto dovuto
+a slash finale. HTTP e WebSocket usano una sola policy. L'origine esatta
+resta valida; alias localhost/127.0.0.1/[::1] sono ammessi solo quando sia
+il Worker richiesto sia l'origine configurata sia il browser sono HTTP
+loopback e la porta del browser coincide con quella configurata. Nessun
+rispecchiamento di origini sconosciute, wildcard o alias su richieste
+HTTPS/domini del Worker produttivo. JWT, ruolo/RLS e ticket restano richiesti.
+Origin assente resta ammessa per i client HTTP server/CLI; WebSocket la
+richiede esplicitamente. Gli inviti usano l'origine canonica normalizzata.
+Non forziamo redirect automatici tra host che potrebbero separare copie
+IndexedDB/offline già presenti: OAuth continua a usare gli URL autorizzati.
