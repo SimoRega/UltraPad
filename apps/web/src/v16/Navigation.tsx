@@ -1,3 +1,4 @@
+import FileIcon from '../FileIcon';
 import { useEffect, useState } from "react";
 import { request } from "../api";
 import type { FileRecord } from "../../../../packages/contracts/src/index";
@@ -61,7 +62,7 @@ export default function Navigation({
               onClick={() => open(r.file)}
             >
               {r.favorite ? "★ " : "◷ "}
-              {r.file.name}
+              <FileIcon name={r.file.name} kind={r.file.kind}/>{r.file.name}
             </button>
           ))}
         {!rows.length && <p>Nessun file visitato.</p>}
