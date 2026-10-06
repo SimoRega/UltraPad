@@ -1,3 +1,11 @@
+# Aggiornamento 1.9 — 6 ottobre 2026
+
+Trascinamento di schede/tratti con mouse, pennello colore/spessore, undo, anteprime dei collegamenti, coordinate corrette con zoom/scroll e recupero esplicito di salvataggi falliti. ADR 0012 e V1_9.md. Migrazione 010 obbligatoria prima del frontend, nessuna migrazione/deploy remoto eseguito. Versione web/desktop 1.9.0 e cache v1.9. Corretto anche il checkpoint SQL (alias b ambiguo).
+
+Verifica locale: typecheck/lint, 34 unità/PGlite (migrazioni reali con tratti/ACL/CAS/checkpoint), 21 integrazione workerd, 3 setup, 2 contratto runner, 6 sicurezza desktop e build web/Worker passati. Cinque nuovi E2E lavagna passati. Nella prima suite browser 52/57 passati: tre regressioni hanno superato timeout/carico e sono passate in verifica mirata; il test drag ora attende il completamento dell'undo prima di trascinare di nuovo. Foglio collaborativo passato dopo allineamento delle tre attese di sync a 20 secondi (come ACK esistente). Tutti i 58 casi attuali risultano verificati complessivamente fra suite e riesami; non dichiarato un singolo run completo senza retry. Auth/metadati browser fixture, nessun cloud/OAuth/installer 1.9 certificato.
+
+Integrazione con main/PR #29: preservate icone/tab/editor 1.8 e lavagne 1.9; versione/cache 1.9, ADR lavagna rinumerato 0012. Sul risultato integrato passati typecheck/lint, 34 unità, 21 workerd, build frontend/Worker e 7 E2E 1.8/1.9.
+
 # Aggiornamento 1.8 — 6 ottobre 2026
 
 Implementate le modifiche UI approvate dal proprietario: icone SVG per

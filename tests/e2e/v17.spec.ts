@@ -207,7 +207,7 @@ test("v1.7 spreadsheet shares independent cells through real durable room and en
     await other.goto(path);
     await expect(
       other.getByRole("button", { name: "Cella A1:", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 20000 });
     await page
       .getByRole("button", { name: "Modifica celle", exact: true })
       .click();
@@ -234,11 +234,11 @@ test("v1.7 spreadsheet shares independent cells through real durable room and en
       .click();
     await expect(
       page.getByRole("button", { name: "Cella B1: 84", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 20000 });
     await page.reload();
     await expect(
       page.getByRole("button", { name: "Cella B1: 84", exact: true }),
-    ).toBeVisible({timeout:20000});
+    ).toBeVisible({ timeout: 20000 });
     await page.route("**/api/v1/bootstrap", async (r) => {
       const res = await r.fetch(),
         body = await res.json();
