@@ -14,9 +14,11 @@ requestSingleInstanceLock (socket AF_UNIX non consentiti); il workaround
 non entra nel repository o nella distribuzione. La CI Windows esegue la
 suite sul vero eseguibile pacchettizzato senza quel workaround.
 
-Installer Windows generato dalla CI e primi tre test sul vero eseguibile
-pacchettizzato passati. Aggiunto un quarto test import/download e download
-separati per installer e ZIP. La regressione web finale è in verifica. Consenso
+CI finale sul commit d7a746d: installer Windows generato, quattro test sul
+vero eseguibile pacchettizzato e 53 E2E web passati. Artifact separati per
+installer e ZIP, workflow Windows 37470957519 e verifica 37470957482.
+Nel container due test web intermittenti (JSON/foglio condiviso) sono passati
+al riesame mirato; entrambe le CI complete sono riuscite. Consenso
 OAuth reale, allowlist Supabase, callback OS dopo installazione pulita,
 firma e auto-update restano gate distinti: non dichiarati verificati.
 
