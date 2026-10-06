@@ -8,6 +8,14 @@ import { canEdit, candidate, limits, sha256, type Role } from '../../../packages
 import { chunks, frameHeader, join, pack, unpack, type Header } from '../../../packages/contracts/src/index';
 type Lease = { token: string; userId: string; role: Role; fileId: string; generation: number; expiresAt: number; sessionId: string; window: number; count: number };
 type Ticket = { token: string; fileId: string; generation: number; document?:boolean };
+const roomSchema = `CREATE TABLE IF NOT EXISTS meta(id INTEGER PRIMARY KEY CHECK(id=1),file_id TEXT,generation INTEGER,seq INTEGER,snapshot BLOB,seed_id TEXT);
+      CREATE TABLE IF NOT EXISTS receipts(id TEXT PRIMARY KEY,actor TEXT,hash TEXT,seq INTEGER,expires INTEGER);
+      CREATE TABLE IF NOT EXISTS tickets(id TEXT PRIMARY KEY,data TEXT,expires INTEGER);
+      CREATE TABLE IF NOT EXISTS pieces(socket TEXT,id TEXT,part INTEGER,total INTEGER,blob BLOB,expires INTEGER,PRIMARY KEY(socket,id,part));
+      CREATE TABLE IF NOT EXISTS checkpoints(id TEXT PRIMARY KEY,label TEXT,seq INTEGER,generation INTEGER,blob BLOB,hash TEXT,created INTEGER);
+      CREATE TABLE IF NOT EXISTS backup_state(id INTEGER PRIMARY KEY CHECK(id=1),seq INTEGER,last_time INTEGER,error TEXT);
+      INSERT OR IGNORE INTO backup_state VALUES(1,0,0,NULL);
+CREATE TABLE IF NOT EXISTS search_state(id INTEGER PRIMARY KEY CHECK(id=1),seq INTEGER);INSERT OR IGNORE INTO search_state VALUES(1,-1);`;
 export class DocumentRoom extends DurableObject<Env> {
   private doc = new Y.Doc();
   private serial: Promise<unknown> = Promise.resolve();
@@ -16,13 +24,7 @@ export class DocumentRoom extends DurableObject<Env> {
   private seq = 0;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS meta(id INTEGER PRIMARY KEY CHECK(id=1),file_id TEXT,generation INTEGER,seq INTEGER,snapshot BLOB,seed_id TEXT);
-      CREATE TABLE IF NOT EXISTS receipts(id TEXT PRIMARY KEY,actor TEXT,hash TEXT,seq INTEGER,expires INTEGER);
-      CREATE TABLE IF NOT EXISTS tickets(id TEXT PRIMARY KEY,data TEXT,expires INTEGER);
-      CREATE TABLE IF NOT EXISTS pieces(socket TEXT,id TEXT,part INTEGER,total INTEGER,blob BLOB,expires INTEGER,PRIMARY KEY(socket,id,part));
-      CREATE TABLE IF NOT EXISTS checkpoints(id TEXT PRIMARY KEY,label TEXT,seq INTEGER,generation INTEGER,blob BLOB,hash TEXT,created INTEGER);
-      CREATE TABLE IF NOT EXISTS backup_state(id INTEGER PRIMARY KEY CHECK(id=1),seq INTEGER,last_time INTEGER,error TEXT);
-      INSERT OR IGNORE INTO backup_state VALUES(1,0,0,NULL);`);
+    ctx.storage.sql.exec(roomSchema);
     const row = ctx.storage.sql.exec<{ file_id: string; generation: number; seq: number; snapshot: ArrayBuffer }>('SELECT * FROM meta WHERE id=1').toArray()[0];
     if (row) { this.fileId = row.file_id; this.generation = row.generation; this.seq = row.seq; Y.applyUpdate(this.doc, new Uint8Array(row.snapshot)); }
     this.doc.getText('content');
@@ -33,8 +35,10 @@ export class DocumentRoom extends DurableObject<Env> {
     if(error)throw new Error(error.message.includes('QUOTA')?'WORKSPACE_QUOTA':'ACCESS_CHANGED');
   }
   protected async reportActivity(token:string,fileId:string,generation:number,seq:number) {
+    const body=this.doc.getText('content').toString();
     const {error}=await database(this.env,token).rpc('record_file_activity',{fid:fileId,gen:generation,seq});
     if(error)throw new Error('ACTIVITY_INDEX_FAILED');
+    const indexed=await database(this.env,token).rpc('index_file',{fid:fileId,gen:generation,seq,body});if(indexed.error)throw new Error('SEARCH_INDEX_FAILED');this.ctx.storage.sql.exec('UPDATE search_state SET seq=max(seq,?)',seq);
   }
   private async prepareDocument(data:Ticket) {
     const draft=new Y.Doc();Y.applyUpdate(draft,Y.encodeStateAsUpdate(this.doc));const before=Y.encodeStateVector(draft);draft.getText('content').insert(draft.getText('content').length,'\n',{});
@@ -78,9 +82,10 @@ export class DocumentRoom extends DurableObject<Env> {
     }
     return this.enqueue(async () => {
       const url = new URL(request.url);
+      if(url.pathname==='/purge'){for(const ws of this.ctx.getWebSockets())ws.close(4003,'Documento eliminato');await this.ctx.storage.deleteAll();this.ctx.storage.sql.exec(roomSchema);this.doc.destroy();this.doc=new Y.Doc();this.doc.getText('content');this.fileId='';this.generation=1;this.seq=0;return Response.json({ok:true});}
       if (url.pathname === '/ticket') {
         const data = await request.json<Ticket>();const authorization=await this.authorize(data.token, data.fileId, data.generation);
-        this.initialize(data.fileId, data.generation);
+        this.initialize(data.fileId, data.generation);if(canEdit(authorization.role))this.ctx.waitUntil(this.reportActivity(data.token,this.fileId,this.generation,this.seq).catch(()=>undefined));
         if(data.document&&canEdit(authorization.role)&&!this.doc.getText('content').toString().endsWith('\n'))await this.prepareDocument(data);
         const ticket = crypto.randomUUID() + crypto.randomUUID();
         this.ctx.storage.sql.exec('INSERT INTO tickets VALUES(?,?,?)', ticket, JSON.stringify(data), Date.now() + 30_000);
@@ -125,10 +130,11 @@ export class DocumentRoom extends DurableObject<Env> {
         const seeded = this.ctx.storage.sql.exec<{ seed_id: string | null }>('SELECT seed_id FROM meta').one().seed_id;
         if (seeded && seeded !== operationId) throw new Error('SEED_CONFLICT');
         if (!seeded) {
+          if(this.seq>0||this.doc.getText('content').length)throw new Error('SEED_CONFLICT');
           const fresh = new Y.Doc();if(delta)fresh.getText('content').applyDelta(validateRichDelta(delta));else fresh.getText('content').insert(0, text);
           const next = candidate(new Y.Doc(), Y.encodeStateAsUpdate(fresh)); fresh.destroy();
           this.ctx.storage.sql.exec('UPDATE meta SET snapshot=?,seed_id=? WHERE id=1', Y.encodeStateAsUpdate(next).buffer, operationId);
-          this.doc.destroy(); this.doc = next;
+          await this.ctx.storage.sync();this.doc.destroy(); this.doc = next;
         }
         return Response.json({ generation });
       }
@@ -225,6 +231,7 @@ export class DocumentRoom extends DurableObject<Env> {
       this.ctx.storage.sql.exec('DELETE FROM pieces WHERE expires<?', now);
       this.ctx.storage.sql.exec('DELETE FROM receipts WHERE expires<?', now);
       for (const ws of this.ctx.getWebSockets()) { const lease = ws.deserializeAttachment() as Lease; if (lease.expiresAt <= now) ws.close(4003, 'Autorizzazione scaduta'); }
+      const indexed=this.ctx.storage.sql.exec<{seq:number}>('SELECT seq FROM search_state').one();if(this.seq>indexed.seq){const lease=this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment() as Lease).find(l=>l.expiresAt>now&&canEdit(l.role));if(lease)try{await this.reportActivity(lease.token,this.fileId,this.generation,this.seq);}catch{/* Dirty sequence remains durable; next alarm/ticket retries. */}}
       const backup=this.ctx.storage.sql.exec<{seq:number;last_time:number}>('SELECT seq,last_time FROM backup_state').one();
       if(this.env.CHECKPOINT_SERVICE_ROLE && this.seq>backup.seq && now-backup.last_time>=15*60_000){
         try {

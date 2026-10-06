@@ -13,7 +13,9 @@ export class TestRoom extends DocumentRoom {
 export default { async fetch(request: Request, env: Env) {
  const url=new URL(request.url); let result: Response;
  if(request.method==='OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':request.headers.get('Origin')??'http://localhost:5174','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,POST,OPTIONS'}});
- if(url.pathname==='/health') {
+ if(['/v1/navigation','/v1/inbox'].includes(url.pathname)){result=Response.json([]);}
+ else if(url.pathname==='/v1/execution/capabilities'){result=Response.json({enabled:false});}
+ else if(url.pathname==='/health') {
   result=Response.json({service:'ultrapad',configured:true});
  } else if(url.pathname==='/v1/mutations' && request.method==='POST') {
   const payload=await request.json<{op:string;args:Record<string,unknown>}>();

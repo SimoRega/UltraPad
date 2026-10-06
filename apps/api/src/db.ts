@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-export interface Env { ROOMS: DurableObjectNamespace; SUPABASE_URL: string; SUPABASE_ANON_KEY: string; APP_ORIGIN: string; CHECKPOINT_SERVICE_ROLE?: string }
+export interface Env { ROOMS: DurableObjectNamespace; SUPABASE_URL: string; SUPABASE_ANON_KEY: string; APP_ORIGIN: string; CHECKPOINT_SERVICE_ROLE?: string; RUNNER_URL?:string; RUNNER_TOKEN?:string }
 export function database(env: Env, token: string) {
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) throw new Error('CONFIGURATION_REQUIRED');
   return createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false, autoRefreshToken: false } });

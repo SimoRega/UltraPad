@@ -1,0 +1,4 @@
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends python3 texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-latex-extra && rm -rf /var/lib/apt/lists/*
+COPY compile.py /opt/compile.py
+USER 65534:65534

@@ -1,0 +1,2 @@
+import * as Y from 'yjs';import {expect,it} from 'vitest';import {encodeAnchor,decodeAnchor} from '../../../apps/web/src/v16/anchors';
+it('relative anchors follow concurrent insertions and reject deleted passages or other generations',()=>{const d=new Y.Doc(),t=d.getText('content');t.insert(0,'Titolo importante');const anchor=encodeAnchor(d,7,17,1);t.insert(0,'Nuovo ');expect(decodeAnchor(d,anchor,1)).toEqual({start:13,end:23});expect(decodeAnchor(d,anchor,2)).toBeNull();t.delete(13,10);expect(decodeAnchor(d,anchor,1)).toBeNull();d.destroy();});

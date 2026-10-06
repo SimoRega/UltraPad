@@ -1,4 +1,4 @@
-const CACHE = 'ultrapad-shell-v1.5';
+const CACHE = 'ultrapad-shell-v1.6';
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.add('/'))));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('ultrapad-shell-') && key !== CACHE).map(key => caches.delete(key))))));
 self.addEventListener('fetch', event => {

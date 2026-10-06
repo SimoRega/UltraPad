@@ -23,6 +23,7 @@ export class CollaborationClient {
     this.writable = canEdit(config.role); this.doc.getText('content');
   }
   private notify(status: SaveStatus, error?: string) { this.status = status; this.config.changed(status, this.outbox.length, this.config.role, error); }
+  retryConnection(){if(this.stopped||this.blocked)return;clearTimeout(this.reconnectTimer);this.retry=0;const previous=this.ws;this.ws=undefined;previous?.close();void this.connect();}
   private online = () => { if (!this.stopped && !this.blocked) this.schedule(); };
   private offline = () => {
     this.authenticated = false; this.synced = false; this.sent.clear(); this.sentAt.clear();

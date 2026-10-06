@@ -105,3 +105,6 @@ describe('v1.3 authenticated ephemeral presence',()=>{
   expect(await (await stub.fetch('https://room/presence')).json()).toEqual([]);ws.close();idle.webSocket!.close();
  });
 });
+it('guest seed retries preserve edited content and purged room can be retried without corrupt storage',async()=>{
+ const stub=binding.get(binding.newUniqueId());const operationId=crypto.randomUUID();const seed=()=>stub.fetch(new Request('https://room/seed',{method:'POST',body:JSON.stringify({fileId,generation:1,text:'Original',operationId})}));expect((await seed()).status).toBe(200);expect((await seed()).status).toBe(200);const other=await stub.fetch(new Request('https://room/seed',{method:'POST',body:JSON.stringify({fileId,generation:1,text:'Overwrite',operationId:crypto.randomUUID()})}));expect(other.status).not.toBe(200);expect((await(await stub.fetch('https://room/snapshot')).json() as {text:string}).text).toBe('Original');expect((await stub.fetch('https://room/purge')).status).toBe(200);expect((await stub.fetch('https://room/purge')).status).toBe(200);expect((await(await stub.fetch('https://room/snapshot')).json() as {text:string}).text).toBe('');
+});

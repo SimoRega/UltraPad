@@ -1,3 +1,5 @@
+import {encodeAnchor,decodeAnchor} from './v16/anchors';
+import SaveCenter from './v16/SaveCenter';
 import { useEffect, useRef, useState } from 'react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
@@ -19,7 +21,7 @@ import { toolsFor, insertion, type TextTool } from '../../../packages/presentati
   if (label === 'json') return new JsonWorker(); if (label === 'css') return new CssWorker();
   if (label === 'html') return new HtmlWorker(); if (label === 'typescript' || label === 'javascript') return new TsWorker(); return new EditorWorker();
 } };
-export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged }: EditorProps) {
+export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged,selectionChanged,jumpSelection }: EditorProps) {
   const {theme}=useTheme(); const toolset=toolsFor(file.name);
   const localRef=useRef(localText);localRef.current=localText;const localChangeRef=useRef(localChanged);localChangeRef.current=localChanged;
   const contentRef=useRef(contentChanged);contentRef.current=contentChanged;
@@ -49,7 +51,8 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
     if (!client || !editor) return;
     const model = editor.getModel(); if (!model) return;
     const binding = new MonacoBinding(client.doc.getText('content'), model, new Set([editor]), client.awareness);
-    return () => binding.destroy();
+    const selection=editor.onDidChangeCursorSelection(()=>{const model=editor.getModel(),s=editor.getSelection();if(model&&s&&!s.isEmpty())selectionChanged?.(encodeAnchor(client.doc,model.getOffsetAt(s.getStartPosition()),model.getOffsetAt(s.getEndPosition()),file.generation));});
+    return () => {selection.dispose();binding.destroy();};
   }, [client, editor]);
   useEffect(()=>{
     if(!container.current)return;
@@ -64,6 +67,8 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   useEffect(()=>{monaco.editor.defineTheme('ultrapad',{base:theme.mode==='light'?'vs':'vs-dark',inherit:true,rules:[],colors:{'editor.background':theme.mode==='light'?'#ffffff':'#17191f','editor.selectionBackground':theme.accent+'40','editorCursor.foreground':theme.accent}});monaco.editor.setTheme('ultrapad');},[theme,editor]);
   const readOnly = !canEdit(currentRole) || status === 'accesso cambiato';
   useEffect(()=>editor?.updateOptions({readOnly,wordWrap:wrap?'on':'off'}),[editor,readOnly,wrap]);
+  useEffect(()=>{if(!client||!editor||!jumpSelection)return;const range=decodeAnchor(client.doc,jumpSelection,file.generation);if(!range){setError('Il passaggio non è più disponibile in questa versione.');return;}const model=editor.getModel();if(!model)return;const a=model.getPositionAt(range.start),b=model.getPositionAt(range.end);editor.setSelection({startLineNumber:a.lineNumber,startColumn:a.column,endLineNumber:b.lineNumber,endColumn:b.column});editor.revealPositionInCenter(a);editor.focus();},[client,editor,jumpSelection]);
+  useEffect(()=>{if(!editor)return;const line=Number(new URLSearchParams(window.location.search).get('line'));if(Number.isInteger(line)&&line>0){editor.setPosition({lineNumber:line,column:1});editor.revealLineInCenter(line);editor.focus();}},[editor]);
   function insert(tool:TextTool) {
     if(!editor || readOnly)return;const selection=editor.getSelection();const model=editor.getModel();if(!selection||!model)return;
     editor.pushUndoStop();editor.executeEdits('ultrapad-toolbar',[{range:selection,text:insertion(tool,model.getValueInRange(selection)),forceMoveMarkers:true}]);editor.pushUndoStop();editor.focus();
@@ -83,6 +88,6 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
     </div>
     {error && <div className="notice" role="alert">{error}</div>}
     <div className="monaco" ref={container} />
-    <footer className="status-bar"><span role="status" aria-live="polite"><i className={`dot ${status === 'salvato sul server' ? 'saved' : ''}`} />{localChanged ? localFailure?'temporaneo non salvato · scarica una copia':'temporaneo · solo questa scheda':status}{pending > 0 ? ` · ${pending} modifiche in attesa` : ''}</span><span>{localChanged?'Nessuna sincronizzazione':`${people} ${people===1?'sessione':'sessioni'}`} · UTF-8 · LF</span></footer>
+    <footer className="status-bar"><SaveCenter fileId={file.id} status={status} pending={pending} local={Boolean(localChanged)} error={error} userId={userId} client={client} download={()=>download(file.name,editor?.getValue()??client?.text??'')}/><span role="status" aria-live="polite"><i className={`dot ${status === 'salvato sul server' ? 'saved' : ''}`} />{localChanged ? localFailure?'temporaneo non salvato · scarica una copia':'temporaneo · solo questa scheda':status}{pending > 0 ? ` · ${pending} modifiche in attesa` : ''}</span><span>{localChanged?'Nessuna sincronizzazione':`${people} ${people===1?'sessione':'sessioni'}`} · UTF-8 · LF</span></footer>
   </section>;
 }
