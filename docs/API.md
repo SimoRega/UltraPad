@@ -55,3 +55,7 @@ per sessioni autenticate con file aperto. Richiede accesso corrente al file;
 nessun token/email restituito. Stato effimero, deduplicato per account.
 Il profilo si aggiorna via Supabase Auth updateUser con first_name, last_name
 e profile_avatar, senza una nuova API privilegiata (ADR 0005).
+
+## Anteprima Maps 1.11
+
+GET `/maps-preview?url=...` è pubblico (anche ospite), soggetto alla policy Origin, senza accesso a file/metadati o database. Accetta solo HTTPS sui domini Google Maps consentiti, risolve al massimo cinque redirect riverificati e restituisce `{url}` oppure HTTP 400 `{error:"MAPS_PREVIEW_UNAVAILABLE"}`. Non è un proxy generico e non inoltra credenziali. Il frontend costruisce la mappa solo da un URL riconosciuto.

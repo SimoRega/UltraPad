@@ -1,4 +1,6 @@
-# UltraPad 1.8
+# UltraPad 1.11
+
+Lavagna fluida con tela bianca/nera, toolbar fissabili, tabelle/grafici e Travel planner: [guida 1.11](docs/V1_11.md). Nessuna nuova migrazione SQL.
 
 Icone per formato, tab stile Chrome e strumenti compatti: [guida 1.8](docs/V1_8.md).
 

@@ -15,14 +15,14 @@ export default function Editor(props:EditorProps){
  const [focus,setFocus]=useState(false);const [width,setWidth]=useState('900');
  useEffect(()=>{document.body.classList.toggle('editor-focus',focus);return()=>document.body.classList.remove('editor-focus');},[focus]);
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setFocus(false);};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
- const structured=plannerPeriod(props.file.name)?'planner':/\.sheet\.json$/i.test(props.file.name)?'sheet':undefined;const [visual,setVisual]=useState(true);
+ const structured=/\.travel\.md$/i.test(props.file.name)?'travel':plannerPeriod(props.file.name)?'planner':/\.sheet\.json$/i.test(props.file.name)?'sheet':undefined;const [visual,setVisual]=useState(true);
  const supportsDocument=/\.txt$/i.test(props.file.name);const [mode,setMode]=useState<'document'|'source'>(supportsDocument?'document':'source');const [switching,setSwitching]=useState(false);const client=useRef<CollaborationClient|null>(null);
  async function switchMode(value:typeof mode){if(switching||value===mode)return;setSwitching(true);try{await client.current?.settled();setMode(value);}finally{setSwitching(false);}}
  const [text,setText]=useState(props.localText??'');const [preview,setPreview]=useState(false);const supportsPreview=/\.(html?|md|tex)$/i.test(props.file.name);
  const Component=supportsDocument&&mode==='document'?Rich:Source;
  return <><nav className="focus-controls editor-commandbar" aria-label="Area di scrittura">
  {supportsDocument&&<div className="document-modes" aria-label="Vista del file"><button disabled={switching} aria-pressed={mode==='document'} onClick={()=>void switchMode('document')}>Documento visuale</button><button disabled={switching} aria-pressed={mode==='source'} onClick={()=>void switchMode('source')}>Sorgente testo</button></div>}
- {structured&&<div className="document-modes"><button aria-pressed={visual} onClick={()=>setVisual(true)}>{structured==='sheet'?'Foglio di calcolo':'Calendario'}</button><button aria-pressed={!visual} onClick={()=>setVisual(false)}>Sorgente testo</button></div>}
+ {structured&&<div className="document-modes"><button aria-pressed={visual} onClick={()=>setVisual(true)}>{structured==='sheet'?'Foglio di calcolo':structured==='travel'?'Travel planner':'Calendario'}</button><button aria-pressed={!visual} onClick={()=>setVisual(false)}>Sorgente testo</button></div>}
  {supportsPreview&&!structured&&<button aria-pressed={preview} onClick={()=>setPreview(v=>!v)}>Anteprima affiancata</button>}
  <span className="spacer"/>{!props.localChanged&&<button aria-pressed={discussion} onClick={()=>setDiscussion(v=>!v)}>Commenti</button>}
  <ToolMenu label="Opzioni editor">{!props.localChanged&&<button onClick={()=>setLinks(true)}>Collegamenti</button>}<label>Larghezza<select value={width} onChange={e=>setWidth(e.target.value)}><option value="680">Stretta</option><option value="900">Media</option><option value="1200">Ampia</option></select></label></ToolMenu>

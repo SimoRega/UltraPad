@@ -1,3 +1,4 @@
+import ToolMenu from "../ToolMenu";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { request } from "../api";
 import { download } from "../files";
@@ -24,6 +25,27 @@ type Item = {
   version: number;
   group_id?: string | null;
 };
+// Cache unchanged stroke geometry across pointer frames and remote snapshots.
+const geometryCache = new WeakMap<
+  Item,
+  { drawing: ReturnType<typeof readDrawing>; width: number; height: number }
+>();
+function geometry(item: Item) {
+  const cached = geometryCache.get(item);
+  if (cached) return cached;
+  const drawing = item.kind === "stroke" ? readDrawing(item.body) : undefined;
+  const value = {
+    drawing,
+    width: drawing
+      ? Math.max(...drawing.points.map((p) => p[0])) + drawing.width
+      : 260,
+    height: drawing
+      ? Math.max(...drawing.points.map((p) => p[1])) + drawing.width
+      : 200,
+  };
+  geometryCache.set(item, value);
+  return value;
+}
 export default function Board({
   projectId,
   files,
@@ -42,7 +64,12 @@ export default function Board({
   const [edit, setEdit] = useState<Item>();
   const [busy, setBusy] = useState(false);
   const [edge, setEdge] = useState({ source: "", target: "" });
-  const [tool, setTool] = useState<"select" | "brush">("select");
+  const [tool, setTool] = useState<"select" | "brush" | "hand">("select");
+  const viewport = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
+  const nextPreview = useRef<Item | undefined>(undefined);
+  const loading = useRef<number | null>(null);
+  const [selected, setSelected] = useState<string>();
   const [brushColor, setBrushColor] = useState("#5269dc");
   const [brushWidth, setBrushWidth] = useState(4);
   type Gesture = {
@@ -50,6 +77,7 @@ export default function Board({
     start: Point;
     before?: Item;
     points: Point[];
+    pan?: { x: number; y: number; left: number; top: number };
   };
   const gesture = useRef<Gesture | null>(null);
   const [preview, setPreview] = useState<Item>();
@@ -62,21 +90,38 @@ export default function Board({
   blocked.current = busy || !!edit || !!pending;
   const undo = useRef<{ before: Item | null; after: Item }[]>([]);
   async function load() {
+    if (loading.current !== null) return;
     const sequence = ++loadSequence.current;
+    loading.current = sequence;
     try {
       const result = await request<Item[]>(`/projects/${projectId}/board`);
       if (
         project.current !== projectId ||
         sequence !== loadSequence.current ||
-        gesture.current
+        gesture.current ||
+        blocked.current
       )
         return;
-      setItems(result);
+      setItems((old) => {
+        const previous = new Map(old.map((item) => [item.id, item]));
+        const merged = result.map((item) => {
+          const before = previous.get(item.id);
+          return before && JSON.stringify(before) === JSON.stringify(item)
+            ? before
+            : item;
+        });
+        return old.length === merged.length &&
+          merged.every((item, index) => item === old[index])
+          ? old
+          : merged;
+      });
       setError("");
     } catch (e) {
       if (project.current !== projectId || sequence !== loadSequence.current)
         return;
       setError((e as Error).message);
+    } finally {
+      if (loading.current === sequence) loading.current = null;
     }
   }
   useEffect(() => {
@@ -89,10 +134,13 @@ export default function Board({
     void load();
     const timer = setInterval(() => {
       if (!document.hidden && !blocked.current && !gesture.current) void load();
-    }, 2500);
+    }, 10000);
     return () => {
       clearInterval(timer);
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
       ++loadSequence.current;
+      loading.current = null;
     };
   }, [projectId]);
   function fresh(kind: Item["kind"]): Item {
@@ -127,7 +175,6 @@ export default function Board({
       setPending(undefined);
       setPreview(undefined);
       setItems((old) => [...old.filter((i) => i.id !== result.id), result]);
-      await load();
       return result;
     } catch (e) {
       if (project.current !== projectId) return;
@@ -149,7 +196,7 @@ export default function Board({
   }
   function begin(e: PointerEvent, item?: Item) {
     if (
-      !editable ||
+      (!editable && tool !== "hand") ||
       list ||
       blocked.current ||
       gesture.current ||
@@ -161,6 +208,23 @@ export default function Board({
     if ((e.target as Element).closest("button,input,select,textarea,a")) return;
     e.preventDefault();
     e.stopPropagation();
+    if (tool === "hand") {
+      gesture.current = {
+        pointer: e.pointerId,
+        start: [0, 0],
+        points: [],
+        pan: {
+          x: e.clientX,
+          y: e.clientY,
+          left: viewport.current!.scrollLeft,
+          top: viewport.current!.scrollTop,
+        },
+      };
+      canvas.current!.setPointerCapture(e.pointerId);
+      canvas.current!.focus({ preventScroll: true });
+      return;
+    }
+    setSelected(item?.id);
     const start = point(e);
     gesture.current = {
       pointer: e.pointerId,
@@ -171,41 +235,67 @@ export default function Board({
     ++loadSequence.current;
     canvas.current!.focus({ preventScroll: true });
     canvas.current!.setPointerCapture(e.pointerId);
-    setPreview(
+    const initial =
       tool === "select"
         ? item
         : {
             ...fresh("stroke"),
             ...finishDrawing([start], brushWidth),
             color: brushColor,
-          },
-    );
+          };
+    nextPreview.current = initial;
+    setPreview(initial);
   }
   function move(e: PointerEvent) {
     const g = gesture.current;
     if (!g || g.pointer !== e.pointerId) return;
+    if (g.pan) {
+      viewport.current!.scrollLeft = g.pan.left + g.pan.x - e.clientX;
+      viewport.current!.scrollTop = g.pan.top + g.pan.y - e.clientY;
+      return;
+    }
     const next = point(e);
+    const schedule = (item: Item | undefined) => {
+      nextPreview.current = item;
+      if (!frame.current)
+        frame.current = requestAnimationFrame(() => {
+          frame.current = 0;
+          setPreview(nextPreview.current);
+        });
+    };
     if (g.before) {
-      setPreview({
+      schedule({
         ...g.before,
         x: coordinate(g.before.x + next[0] - g.start[0]),
         y: coordinate(g.before.y + next[1] - g.start[1]),
       });
     } else {
       g.points = appendPoint(g.points, next);
-      setPreview(
-        (old) => old && { ...old, ...finishDrawing(g.points, brushWidth) },
-      );
+      schedule({
+        ...(nextPreview.current ?? preview!),
+        ...finishDrawing(g.points, brushWidth),
+      });
     }
   }
   function cancel() {
     if (!gesture.current) return;
     gesture.current = null;
+    cancelAnimationFrame(frame.current);
+    frame.current = 0;
+    nextPreview.current = undefined;
     setPreview(undefined);
   }
   function end(e: PointerEvent) {
     const g = gesture.current;
     if (!g || g.pointer !== e.pointerId) return;
+    cancelAnimationFrame(frame.current);
+    frame.current = 0;
+    if (g.pan) {
+      gesture.current = null;
+      if (canvas.current?.hasPointerCapture(e.pointerId))
+        canvas.current.releasePointerCapture(e.pointerId);
+      return;
+    }
     const nextPoint = point(e);
     const next = g.before
       ? {
@@ -213,11 +303,12 @@ export default function Board({
           x: coordinate(g.before.x + nextPoint[0] - g.start[0]),
           y: coordinate(g.before.y + nextPoint[1] - g.start[1]),
         }
-      : preview && {
-          ...preview,
+      : (nextPreview.current ?? preview) && {
+          ...(nextPreview.current ?? preview!),
           ...finishDrawing(appendPoint(g.points, nextPoint, true), brushWidth),
         };
     gesture.current = null;
+    nextPreview.current = undefined;
     if (canvas.current?.hasPointerCapture(e.pointerId))
       canvas.current.releasePointerCapture(e.pointerId);
     if (!next || (g.before && next.x === g.before.x && next.y === g.before.y)) {
@@ -232,15 +323,8 @@ export default function Board({
     ? [...items.filter((i) => i.id !== preview.id), preview]
     : items;
   const extent = (item: Item, axis: 0 | 1) => {
-    const drawing = item.kind === "stroke" && readDrawing(item.body);
-    return (
-      (axis === 0 ? item.x : item.y) +
-      (drawing
-        ? Math.max(...drawing.points.map((p) => p[axis])) + drawing.width
-        : axis === 0
-          ? 260
-          : 200)
-    );
+    const g = geometry(item);
+    return axis === 0 ? item.x + g.width : item.y + g.height;
   };
   return (
     <section className="board">
@@ -253,6 +337,14 @@ export default function Board({
         >
           {list ? "Vista lavagna" : "Vista elenco"}
         </button>
+        {!list && (
+          <button
+            aria-pressed={tool === "hand"}
+            onClick={() => setTool("hand")}
+          >
+            Mano
+          </button>
+        )}
         {editable && !list && (
           <>
             <button
@@ -296,44 +388,54 @@ export default function Board({
           Zoom
           <input
             type="range"
-            min="0.5"
-            max="1.5"
-            step="0.1"
+            min="0.25"
+            max="2"
+            step="0.05"
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
           />
         </label>
         <button
-          onClick={async () => {
-            try {
-              const versions = await request<unknown[]>(
-                `/projects/${projectId}/board/checkpoints`,
-              );
-              download(
-                "versioni-lavagna.json",
-                JSON.stringify(versions, null, 2),
-              );
-            } catch (e) {
-              setError((e as Error).message);
-            }
+          onClick={() => {
+            setZoom(1);
+            viewport.current?.scrollTo(0, 0);
           }}
         >
-          Esporta versioni
+          Ripristina vista
         </button>
-        <button
-          onClick={() =>
-            download(
-              "lavagna.json",
-              JSON.stringify(
-                { format: "ultrapad-board", version: 1, items },
-                null,
-                2,
-              ),
-            )
-          }
-        >
-          Esporta lavagna
-        </button>
+        <ToolMenu label="Versioni e download">
+          <button
+            onClick={async () => {
+              try {
+                const versions = await request<unknown[]>(
+                  `/projects/${projectId}/board/checkpoints`,
+                );
+                download(
+                  "versioni-lavagna.json",
+                  JSON.stringify(versions, null, 2),
+                );
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          >
+            Esporta versioni
+          </button>
+          <button
+            onClick={() =>
+              download(
+                "lavagna.json",
+                JSON.stringify(
+                  { format: "ultrapad-board", version: 1, items },
+                  null,
+                  2,
+                ),
+              )
+            }
+          >
+            Esporta lavagna
+          </button>
+        </ToolMenu>
         {editable && (
           <>
             <button
@@ -403,7 +505,9 @@ export default function Board({
                       op: "board_delete",
                       args: last.after,
                     });
-                    await load();
+                    setItems((old) =>
+                      old.filter((item) => item.id !== last.after.id),
+                    );
                   } catch (e) {
                     setError((e as Error).message);
                     return;
@@ -427,53 +531,55 @@ export default function Board({
         </p>
       )}
       {editable && (
-        <form
-          className="board-connect"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void put({ ...fresh("edge"), ...edge });
-          }}
-        >
-          <label>
-            Da
-            <select
-              required
-              value={edge.source}
-              onChange={(e) => setEdge({ ...edge, source: e.target.value })}
-            >
-              <option value="">Scheda…</option>
-              {items
-                .filter((i) => i.kind !== "edge")
-                .map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {(i.kind === "stroke" ? "Disegno" : i.body) ||
-                      files.find((f) => f.id === i.file_id)?.name ||
-                      "Gruppo"}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label>
-            A
-            <select
-              required
-              value={edge.target}
-              onChange={(e) => setEdge({ ...edge, target: e.target.value })}
-            >
-              <option value="">Scheda…</option>
-              {items
-                .filter((i) => i.kind !== "edge")
-                .map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {(i.kind === "stroke" ? "Disegno" : i.body) ||
-                      files.find((f) => f.id === i.file_id)?.name ||
-                      "Gruppo"}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <button disabled={busy || !!pending}>Collega</button>
-        </form>
+        <ToolMenu label="Collegamenti lavagna">
+          <form
+            className="board-connect"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void put({ ...fresh("edge"), ...edge });
+            }}
+          >
+            <label>
+              Da
+              <select
+                required
+                value={edge.source}
+                onChange={(e) => setEdge({ ...edge, source: e.target.value })}
+              >
+                <option value="">Scheda…</option>
+                {items
+                  .filter((i) => i.kind !== "edge")
+                  .map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {(i.kind === "stroke" ? "Disegno" : i.body) ||
+                        files.find((f) => f.id === i.file_id)?.name ||
+                        "Gruppo"}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              A
+              <select
+                required
+                value={edge.target}
+                onChange={(e) => setEdge({ ...edge, target: e.target.value })}
+              >
+                <option value="">Scheda…</option>
+                {items
+                  .filter((i) => i.kind !== "edge")
+                  .map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {(i.kind === "stroke" ? "Disegno" : i.body) ||
+                        files.find((f) => f.id === i.file_id)?.name ||
+                        "Gruppo"}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button disabled={busy || !!pending}>Collega</button>
+          </form>
+        </ToolMenu>
       )}
       {pending && (
         <p role="status">
@@ -497,18 +603,20 @@ export default function Board({
         <p className="muted">
           {!editable
             ? "Lavagna in sola lettura."
-            : tool === "brush"
-              ? "Trascina per disegnare. Escape annulla il tratto in corso."
-              : "Trascina le schede o i tratti per spostarli. Usa Modifica per le coordinate."}
+            : tool === "hand"
+              ? "Trascina la tela per navigare. V seleziona, B pennello, H mano."
+              : tool === "brush"
+                ? "Trascina per disegnare. Escape annulla il tratto in corso."
+                : "Trascina le schede o i tratti per spostarli. Usa Modifica per le coordinate."}
         </p>
       )}
-      <div className={list ? "board-list" : "board-viewport"}>
+      <div ref={viewport} className={list ? "board-list" : "board-viewport"}>
         <div
           ref={canvas}
           className={
             list
               ? ""
-              : `board-canvas board-tool-${editable ? tool : "readonly"}`
+              : `board-canvas board-tool-${tool === "hand" ? "hand" : editable ? tool : "readonly"}`
           }
           tabIndex={list ? undefined : 0}
           aria-label="Area lavagna"
@@ -520,7 +628,17 @@ export default function Board({
             if (gesture.current) cancel();
           }}
           onKeyDown={(e) => {
-            if (e.key === "Escape") cancel();
+            if ((e.target as Element).closest("input,textarea,select,button"))
+              return;
+            if (e.key === "Escape") {
+              cancel();
+              setSelected(undefined);
+            }
+            if (!gesture.current && !blocked.current) {
+              if (e.key.toLowerCase() === "h") setTool("hand");
+              if (editable && e.key.toLowerCase() === "v") setTool("select");
+              if (editable && e.key.toLowerCase() === "b") setTool("brush");
+            }
           }}
           style={
             list
@@ -559,7 +677,7 @@ export default function Board({
               {visible
                 .filter((i) => i.kind === "stroke")
                 .map((i) => {
-                  const d = readDrawing(i.body);
+                  const d = geometry(i).drawing;
                   return d ? (
                     <path
                       key={i.id}
@@ -582,8 +700,11 @@ export default function Board({
             .map((i) => (
               <article
                 key={i.id}
-                className="board-card"
+                className={`board-card ${selected === i.id ? "board-selected" : ""}`}
                 data-item-id={i.id}
+                onDoubleClick={() => {
+                  if (editable && !blocked.current) setEdit(i);
+                }}
                 onPointerDown={(e) => begin(e, i)}
                 style={
                   list
@@ -617,7 +738,7 @@ export default function Board({
                     aria-label="Anteprima disegno"
                   >
                     {(() => {
-                      const d = readDrawing(i.body);
+                      const d = geometry(i).drawing;
                       return d ? (
                         <path
                           d={drawingPath(d.points)}

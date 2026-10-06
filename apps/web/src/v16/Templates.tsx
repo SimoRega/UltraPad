@@ -1,5 +1,6 @@
 import {emptySheet} from '../../../../packages/product/src/sheet';
 export const templates = [
+  {id:"travel",label:"Travel planner",name:"viaggio.travel.md",text:"# Il mio viaggio\n\n## Itinerario\n\nIncolla qui i link di luoghi, hotel e ristoranti.\n\n## Prenotazioni\n\n## Budget\n",note:"Tappe con card, foto allegate e mappe Google sul file Markdown."},
   {
     id: "blank",
     label: "Vuoto",

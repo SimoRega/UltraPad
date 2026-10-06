@@ -1,3 +1,4 @@
+import {resolveMapsLink} from '../../../packages/product/src/maps';
 import {thesisFiles} from '../../../packages/product/src/thesis';
 import {purge} from './purge';
 import {codeCells,execute,cancelExecution} from './execution';
@@ -22,6 +23,7 @@ app.use('*', async (c, next) => {
   return cors({ origin: received ?? expected, allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })(c, next);
 });
 app.use('/v1/*',async(c,next)=>{const maxSize=c.req.path==='/v1/guest-transfer'?8*1024*1024:c.req.path.startsWith('/v1/calderone')?1024*1024:64*1024;return bodyLimit({maxSize,onError:c=>c.json({error:'REQUEST_TOO_LARGE'},413)})(c,next);});
+app.get('/maps-preview',async c=>{try{const url=await resolveMapsLink(c.req.query('url')??'');return c.json({url});}catch{return c.json({error:'MAPS_PREVIEW_UNAVAILABLE'},400);}});
 app.get('/health', c => c.json({ service: 'ultrapad', configured: Boolean(c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) }));
 app.get('/ws/:fileId/:generation', c => {
   id.parse(c.req.param('fileId')); const generation = z.coerce.number().int().positive().parse(c.req.param('generation'));

@@ -1,4 +1,5 @@
 import ToolMenu from './ToolMenu';
+import TravelPlanner from './v111/TravelPlanner';
 import Planner from './v17/Planner';
 import Spreadsheet from './v17/Spreadsheet';
 import {useLocation} from 'react-router-dom';
@@ -25,7 +26,7 @@ import { toolsFor, insertion, type TextTool } from '../../../packages/presentati
   if (label === 'json') return new JsonWorker(); if (label === 'css') return new CssWorker();
   if (label === 'html') return new HtmlWorker(); if (label === 'typescript' || label === 'javascript') return new TsWorker(); return new EditorWorker();
 } };
-export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged,selectionChanged,jumpSelection, visual }: EditorProps & {visual?: 'planner'|'sheet'}) {
+export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged,selectionChanged,jumpSelection, visual }: EditorProps & {visual?: 'planner'|'sheet'|'travel'}) {
   const {search}=useLocation();const {theme}=useTheme(); const toolset=toolsFor(file.name);
   const localRef=useRef(localText);localRef.current=localText;const localChangeRef=useRef(localChanged);localChangeRef.current=localChanged;
   const contentRef=useRef(contentChanged);contentRef.current=contentChanged;
@@ -94,6 +95,7 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
     {error && <div className="notice" role="alert">{error}</div>}
     <div className={visual?'visual-source-hidden':'monaco'} ref={container} />
     {visual==='planner'&&<Planner name={file.name} text={visualText} readOnly={readOnly||(!localChanged&&!client)} replace={replace}/>}
+    {visual==='travel'&&<TravelPlanner text={visualText} readOnly={readOnly||(!localChanged&&!client)} replace={replace}/>}
     {visual==='sheet'&&<Spreadsheet name={file.name} text={visualText} readOnly={readOnly||(!localChanged&&!client)} replace={replace}/>}
     <footer className="status-bar"><SaveCenter fileId={file.id} status={status} pending={pending} local={Boolean(localChanged)} error={error} userId={userId} client={client} download={()=>download(file.name,editor?.getValue()??client?.text??'')}/><span role="status" aria-live="polite"><i className={`dot ${status === 'salvato sul server' ? 'saved' : ''}`} />{localChanged ? localFailure?'temporaneo non salvato · scarica una copia':'temporaneo · solo questa scheda':status}{pending > 0 ? ` · ${pending} modifiche in attesa` : ''}</span><span>{localChanged?'Nessuna sincronizzazione':`${people} ${people===1?'sessione':'sessioni'}`} · UTF-8 · LF</span></footer>
   </section>;
