@@ -1,3 +1,4 @@
+import ToolMenu from './ToolMenu';
 import Planner from './v17/Planner';
 import Spreadsheet from './v17/Spreadsheet';
 import {useLocation} from 'react-router-dom';
@@ -81,16 +82,15 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   async function format() {try{const action=editor?.getAction('editor.action.formatDocument');if(!action?.isSupported())throw new Error('Formattazione non disponibile per questo documento.');await action.run();setError('');}catch(e){setError(e instanceof Error?e.message:'Formattazione non riuscita');}}
   function validate() {try{const text=editor?.getValue()??'';if(toolset.validate==='json')JSON.parse(text);else if(new DOMParser().parseFromString(text,'application/xml').getElementsByTagName('parsererror').length)throw new Error('XML non valido: controlla elementi e attributi.');setError(toolset.validate==='json'?'JSON valido.':'XML valido.');}catch(e){setError(e instanceof Error?e.message:'Documento non valido');}}
   return <section className="editor-region" aria-label={`Editor di ${file.name}`}>
-    <div className="editor-toolbar"><span className="badge">{toolset.label}</span><span className="muted">{readOnly ? 'Sola lettura' : 'Modificabile'}</span><span className="spacer" />
+    <div className="editor-toolbar source-toolbar"><span className="badge">{toolset.label}</span><span className="muted">{readOnly ? 'Sola lettura' : 'Modificabile'}</span><span className="spacer" />
       <button onClick={() => setWrap(!wrap)} aria-pressed={wrap}>A capo</button><button onClick={() => editor?.getAction('actions.find')?.run()}>Cerca</button>
-      <button onClick={() => download(file.name, editor?.getValue() ?? client?.text ?? '')}>Scarica copia locale</button></div>
-    <div hidden={Boolean(visual)} className="format-toolbar" role="toolbar" aria-label={`Strumenti ${toolset.label}`}>
+      <button onClick={() => download(file.name, editor?.getValue() ?? client?.text ?? '')}>Scarica copia locale</button>{!visual&&<ToolMenu label="Strumenti sorgente"><div className="format-toolbar" role="toolbar" aria-label={`Strumenti ${toolset.label}`}>
       <button disabled={readOnly} onClick={()=>{editor?.trigger('toolbar','undo',null);editor?.focus();}} title="Annulla (Ctrl+Z)">↶ Annulla</button><button disabled={readOnly} onClick={()=>{editor?.trigger('toolbar','redo',null);editor?.focus();}}>↷ Ripeti</button>
       {toolset.tools.map(tool=><button key={tool.label} disabled={readOnly || !editor || (!localChanged && !client)} onClick={()=>insert(tool)}>{tool.label}</button>)}
       {toolset.format && <button disabled={readOnly || !editor} onClick={()=>void format()}>Formatta documento</button>}
       {toolset.validate && <button onClick={validate}>Verifica {toolset.validate.toUpperCase()}</button>}
       <button disabled={readOnly} onClick={()=>editor?.getAction('editor.action.indentLines')?.run()}>Indenta</button>
-    </div>
+    </div></ToolMenu>}</div>
     {error && <div className="notice" role="alert">{error}</div>}
     <div className={visual?'visual-source-hidden':'monaco'} ref={container} />
     {visual==='planner'&&<Planner name={file.name} text={visualText} readOnly={readOnly||(!localChanged&&!client)} replace={replace}/>}

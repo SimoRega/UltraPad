@@ -1,4 +1,6 @@
-# UltraPad 1.7
+# UltraPad 1.8
+
+Icone per formato, tab stile Chrome e strumenti compatti: [guida 1.8](docs/V1_8.md).
 
 Calendari su Markdown e fogli di calcolo con formule e toolbar: [guida 1.7](docs/V1_7.md).
 

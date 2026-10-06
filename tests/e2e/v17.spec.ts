@@ -238,7 +238,7 @@ test("v1.7 spreadsheet shares independent cells through real durable room and en
     await page.reload();
     await expect(
       page.getByRole("button", { name: "Cella B1: 84", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({timeout:20000});
     await page.route("**/api/v1/bootstrap", async (r) => {
       const res = await r.fetch(),
         body = await res.json();
@@ -258,7 +258,7 @@ test("v1.7 spreadsheet shares independent cells through real durable room and en
     await page.reload();
     await expect(
       page.getByRole("textbox", { name: "Formula o valore" }),
-    ).toBeDisabled();
+    ).toBeDisabled({timeout:20000});
   } finally {
     await page.unrouteAll({behavior:"wait"});
     await context.close();

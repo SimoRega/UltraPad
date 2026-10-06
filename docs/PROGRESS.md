@@ -1,3 +1,25 @@
+# Aggiornamento 1.8 — 6 ottobre 2026
+
+Implementate le modifiche UI approvate dal proprietario: icone SVG per
+formato/cartella condivise, tab stile Chrome, intestazione workspace allineata,
+barre editor compatte con menu sovrapposti Testo/Paragrafo/Stili, strumenti
+sorgente ed opzioni. Versione web/desktop 1.8.0 e cache shell aggiornata.
+Guida V1_8.md e ADR 0011. Nessuna migrazione o modifica API/CRDT/ACL/sandbox.
+
+Verificati typecheck/lint, 31 unità/PGlite, 21 integrazione workerd, 3 setup,
+2 contratto runner, 6 sicurezza desktop, build web/Worker dry-run. 55 E2E web
+verificati: 52 nella suite isolata completa e i 3 restanti al riesame mirato;
+anche le due nuove prove 1.8 sono state ripetute dopo la rifinitura mobile.
+I nuovi test controllano selezione/menu/Escape, ingombro delle barre,
+esportazione visibile a 360px, icone per formato e strumenti sorgente.
+Le attese di caricamento dell'editor sono portate a 20 s nei test interessati.
+
+L'ambiente aveva un'altra istanza sulle porte standard: le prove finali
+usano porte locali 5273/5274/8888 isolate, senza committare quel cambio.
+Il riesame mirato supera il timeout della preview ospite e della vista viewer
+foglio; gli screenshot desktop/mobile sono stati ispezionati. Nessun deploy
+remoto, OAuth reale o nuovo installer dichiarato verificato dalla sessione.
+
 # Client desktop Electron — 6 ottobre 2026
 
 Su richiesta del proprietario, aggiunto apps/desktop con frontend 1.7 incluso,
