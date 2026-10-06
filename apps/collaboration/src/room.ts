@@ -100,6 +100,7 @@ export class DocumentRoom extends DurableObject<Env> {
         return new Response(null, { status: 101, webSocket: pair[0] });
       }
       if (url.pathname === '/backup-health') return Response.json(this.ctx.storage.sql.exec('SELECT * FROM backup_state').one());
+      if(url.pathname==='/revision')return Response.json({generation:this.generation,serverSeq:this.seq});
       if (url.pathname === '/snapshot') return Response.json({ text: this.doc.getText('content').toString(), generation: this.generation, serverSeq: this.seq, delta:this.doc.getText('content').toDelta(), payload: [...Y.encodeStateAsUpdate(this.doc)] });
       if (url.pathname === '/checkpoints' && request.method === 'GET') return Response.json(this.ctx.storage.sql.exec('SELECT id,label,seq,generation,hash,created FROM checkpoints ORDER BY created DESC').toArray());
       if (url.pathname === '/checkpoints' && request.method === 'POST') {

@@ -1,3 +1,4 @@
+import {useLocation} from 'react-router-dom';
 import {encodeAnchor,decodeAnchor} from './v16/anchors';
 import SaveCenter from './v16/SaveCenter';
 import { useEffect, useRef, useState } from 'react';
@@ -22,7 +23,7 @@ import { toolsFor, insertion, type TextTool } from '../../../packages/presentati
   if (label === 'html') return new HtmlWorker(); if (label === 'typescript' || label === 'javascript') return new TsWorker(); return new EditorWorker();
 } };
 export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged,selectionChanged,jumpSelection }: EditorProps) {
-  const {theme}=useTheme(); const toolset=toolsFor(file.name);
+  const {search}=useLocation();const {theme}=useTheme(); const toolset=toolsFor(file.name);
   const localRef=useRef(localText);localRef.current=localText;const localChangeRef=useRef(localChanged);localChangeRef.current=localChanged;
   const contentRef=useRef(contentChanged);contentRef.current=contentChanged;
   const [localFailure,setLocalFailure]=useState(false);
@@ -68,7 +69,7 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   const readOnly = !canEdit(currentRole) || status === 'accesso cambiato';
   useEffect(()=>editor?.updateOptions({readOnly,wordWrap:wrap?'on':'off'}),[editor,readOnly,wrap]);
   useEffect(()=>{if(!client||!editor||!jumpSelection)return;const range=decodeAnchor(client.doc,jumpSelection,file.generation);if(!range){setError('Il passaggio non è più disponibile in questa versione.');return;}const model=editor.getModel();if(!model)return;const a=model.getPositionAt(range.start),b=model.getPositionAt(range.end);editor.setSelection({startLineNumber:a.lineNumber,startColumn:a.column,endLineNumber:b.lineNumber,endColumn:b.column});editor.revealPositionInCenter(a);editor.focus();},[client,editor,jumpSelection]);
-  useEffect(()=>{if(!editor)return;const line=Number(new URLSearchParams(window.location.search).get('line'));if(Number.isInteger(line)&&line>0){editor.setPosition({lineNumber:line,column:1});editor.revealLineInCenter(line);editor.focus();}},[editor]);
+  useEffect(()=>{if(!editor)return;const line=Number(new URLSearchParams(search).get('line'));if(Number.isInteger(line)&&line>0){editor.setPosition({lineNumber:line,column:1});editor.revealLineInCenter(line);editor.focus();}},[editor,search]);
   function insert(tool:TextTool) {
     if(!editor || readOnly)return;const selection=editor.getSelection();const model=editor.getModel();if(!selection||!model)return;
     editor.pushUndoStop();editor.executeEdits('ultrapad-toolbar',[{range:selection,text:insertion(tool,model.getValueInRange(selection)),forceMoveMarkers:true}]);editor.pushUndoStop();editor.focus();

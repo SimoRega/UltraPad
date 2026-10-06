@@ -48,6 +48,37 @@ export default function Execution({
     if (result) setStale(true);
   }, [text]);
   useEffect(() => {
+    if (!result) return;
+    let active = true;
+    const check = () => {
+      if (document.hidden) return;
+      void request<{ stale: boolean }>("/execution/revisions", {
+        revisions: result.revisions.map(({ id, generation, serverSeq }) => ({
+          id,
+          generation,
+          serverSeq,
+        })),
+      })
+        .then((v) => {
+          if (active && v.stale) setStale(true);
+        })
+        .catch(() => {
+          if (active) {
+            setStale(true);
+            setError(
+              "Non è possibile verificare le revisioni o l’accesso ai sorgenti.",
+            );
+          }
+        });
+    };
+    check();
+    const timer = setInterval(check, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [result]);
+  useEffect(() => {
     if (!result?.pdf) {
       setPdf("");
       return;
@@ -66,10 +97,19 @@ export default function Execution({
     setError("");
     setResult(undefined);
     try {
+      const captured = latex ? text : (cells[cell ?? 0]?.code ?? "");
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(captured),
+      );
+      const expectedHash = Array.from(new Uint8Array(digest), (b) =>
+        b.toString(16).padStart(2, "0"),
+      ).join("");
       const value = await request<Result>(`/files/${id}/execute`, {
         kind: latex ? "latex" : "code",
         cell,
         jobId: job.current,
+        expectedHash,
       });
       if (run.current === serial) {
         setResult(value);
