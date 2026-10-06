@@ -1,6 +1,12 @@
-import { useRef, useState } from "react";
+import ToolMenu from "../ToolMenu";
+import Chart from "./SheetChart";
+import { useMemo, useRef, useState } from "react";
 import {
-  cellValue,
+  sheetEvaluator,
+  rangeCells,
+  pasteCells,
+  sortTable,
+  type Sheet,
   columnName,
   emptySheet,
   parseSheet,
@@ -15,12 +21,14 @@ function CellInput({
   disabled,
   select,
   save,
+  paste,
 }: {
   id: string;
   value: string;
   disabled: boolean;
   select: () => void;
   save: (value: string) => void;
+  paste: (value: string) => void;
 }) {
   const [draft, setDraft] = useState<string>();
   const cancelled = useRef(false);
@@ -29,6 +37,16 @@ function CellInput({
       aria-label={`Cella ${id}`}
       disabled={disabled}
       value={draft ?? value}
+      onPaste={(e) => {
+        const value = e.clipboardData.getData("text/plain");
+        if (/[\t\n]/.test(value)) {
+          e.preventDefault();
+          setDraft(undefined);
+          cancelled.current = true;
+          paste(value);
+          e.currentTarget.blur();
+        }
+      }}
       onFocus={() => {
         select();
         cancelled.current = false;
@@ -67,13 +85,29 @@ export default function Spreadsheet({
   const [selected, setSelected] = useState("A1");
   const [editing, setEditing] = useState(false);
   const [formula, setFormula] = useState<string>();
-  let sheet;
-  try {
-    sheet = parseSheet(text);
-  } catch (e) {
+  const [range, setRange] = useState("A1:B6"),
+    [title, setTitle] = useState("Tabella 1"),
+    [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar"),
+    [activeTable, setActiveTable] = useState(""),
+    [filter, setFilter] = useState(""),
+    [scroll, setScroll] = useState(0),
+    [error, setError] = useState("");
+  const parsed = useMemo(() => {
+    try {
+      return { sheet: parseSheet(text) };
+    } catch (e) {
+      return { error: (e as Error).message };
+    }
+  }, [text]);
+  const sheet = parsed.sheet;
+  const evaluate = useMemo(
+    () => (sheet ? sheetEvaluator(sheet) : () => ""),
+    [sheet],
+  );
+  if (!sheet) {
     return (
       <div role="alert">
-        <p>{(e as Error).message}</p>
+        <p>{parsed.error}</p>
         {!text && !readOnly && (
           <button
             onClick={() => replace(0, 0, JSON.stringify(emptySheet(), null, 2))}
@@ -85,6 +119,41 @@ export default function Spreadsheet({
     );
   }
   const cell = sheet.cells[selected] ?? { value: "" };
+  function commit(next: Sheet) {
+    if (readOnly) return;
+    try {
+      const json = JSON.stringify(next, null, 2);
+      parseSheet(json);
+      const p = textPatch(text, json);
+      replace(p.start, p.length, p.text);
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  function attempt(fn: () => Sheet) {
+    try {
+      commit(fn());
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  const table = sheet.tables?.find((t) => t.id === activeTable),
+    area = table ? rangeCells(sheet, table.range) : undefined;
+  const rows = Array.from({ length: sheet.rows }, (_, r) => r).filter(
+    (r) =>
+      !area ||
+      !filter ||
+      r <= area.top ||
+      r > area.bottom ||
+      Array.from({ length: area.right - area.left + 1 }, (_, c) =>
+        String(evaluate(columnName(area.left + c) + (r + 1))),
+      ).some((v) => v.toLowerCase().includes(filter.toLowerCase())),
+  );
+  const start = editing
+      ? 0
+      : Math.max(0, Math.min(rows.length - 1, Math.floor(scroll / 36) - 5)),
+    visibleRows = editing ? rows : rows.slice(start, start + 40);
   function update(id: string, patch: Partial<Cell>) {
     if (readOnly) return;
     const next = {
@@ -203,6 +272,142 @@ export default function Spreadsheet({
           Esporta CSV
         </button>
       </div>
+      <ToolMenu label="Tabelle e grafici">
+        <div
+          className="sheet-data-tools"
+          role="toolbar"
+          aria-label="Tabelle e grafici"
+        >
+          <label>
+            Intervallo
+            <input
+              aria-label="Intervallo tabella o grafico"
+              value={range}
+              onChange={(e) => setRange(e.target.value.toUpperCase())}
+            />
+          </label>
+          <label>
+            Titolo
+            <input
+              value={title}
+              maxLength={120}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </label>
+          <button
+            disabled={readOnly}
+            onClick={() =>
+              attempt(() => ({
+                ...sheet,
+                tables: [
+                  ...(sheet.tables ?? []),
+                  { id: crypto.randomUUID(), name: title, range },
+                ],
+              }))
+            }
+          >
+            Crea tabella
+          </button>
+          <label>
+            Tipo grafico
+            <select
+              value={chartType}
+              onChange={(e) => setChartType(e.target.value as typeof chartType)}
+            >
+              <option value="bar">Barre</option>
+              <option value="line">Linee</option>
+              <option value="pie">Torta</option>
+            </select>
+          </label>
+          <button
+            disabled={readOnly}
+            onClick={() =>
+              attempt(() => {
+                const a = rangeCells(sheet, range);
+                if (a.right <= a.left || a.bottom <= a.top)
+                  throw Error(
+                    "Il grafico richiede intestazioni e almeno due colonne.",
+                  );
+                return {
+                  ...sheet,
+                  charts: [
+                    ...(sheet.charts ?? []),
+                    { id: crypto.randomUUID(), title, range, type: chartType },
+                  ],
+                };
+              })
+            }
+          >
+            Crea grafico
+          </button>
+          <label>
+            Tabella
+            <select
+              aria-label="Tabella"
+              value={activeTable}
+              onChange={(e) => {
+                setActiveTable(e.target.value);
+                setFilter("");
+                setScroll(0);
+              }}
+            >
+              <option value="">Nessuna</option>
+              {sheet.tables?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} · {t.range}
+                </option>
+              ))}
+            </select>
+          </label>
+          {table && (
+            <>
+              <label>
+                Filtra tabella
+                <input
+                  value={filter}
+                  onChange={(e) => {
+                    setFilter(e.target.value);
+                    setScroll(0);
+                  }}
+                />
+              </label>
+              <button
+                disabled={readOnly}
+                onClick={() =>
+                  attempt(() =>
+                    sortTable(sheet, table, selected.charCodeAt(0) - 65),
+                  )
+                }
+              >
+                Ordina crescente
+              </button>
+              <button
+                disabled={readOnly}
+                onClick={() =>
+                  attempt(() =>
+                    sortTable(sheet, table, selected.charCodeAt(0) - 65, true),
+                  )
+                }
+              >
+                Ordina decrescente
+              </button>
+              <button
+                disabled={readOnly}
+                onClick={() => {
+                  commit({
+                    ...sheet,
+                    tables: sheet.tables?.filter((t) => t.id !== table.id),
+                  });
+                  setActiveTable("");
+                }}
+              >
+                Rimuovi tabella
+              </button>
+            </>
+          )}
+        </div>
+      </ToolMenu>
+      {error && <p role="alert">{error}</p>}
       <label className="formula-bar">
         <strong>{selected}</strong>
         <span>ƒx</span>
@@ -221,10 +426,14 @@ export default function Spreadsheet({
         />
       </label>
       <p className="muted">
-        Formule: =A1+B1, =SUM(A1:A5), AVERAGE, MIN, MAX. Seleziona una cella;
-        Invio conferma. Salvataggio dopo uscita dalla cella.
+        Formule: =A1+B1, =SUM(A1:A5), AVERAGE, MIN, MAX, COUNT, COUNTA. Incolla
+        righe e colonne con Tab; seleziona una cella; Invio conferma.
+        Salvataggio dopo uscita dalla cella.
       </p>
-      <div className="sheet-scroll">
+      <div
+        className="sheet-scroll"
+        onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
+      >
         <table aria-label="Foglio di calcolo">
           <thead>
             <tr>
@@ -237,13 +446,21 @@ export default function Spreadsheet({
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: sheet.rows }, (_, r) => (
+            {start > 0 && (
+              <tr aria-hidden="true">
+                <td
+                  colSpan={sheet.columns + 1}
+                  style={{ height: start * 36, padding: 0 }}
+                />
+              </tr>
+            )}
+            {visibleRows.map((r) => (
               <tr key={r}>
                 <th scope="row">{r + 1}</th>
                 {Array.from({ length: sheet.columns }, (_, c) => {
                   const id = columnName(c) + (r + 1),
                     cell = sheet.cells[id],
-                    value = cellValue(sheet, id);
+                    value = evaluate(id);
                   const result =
                     typeof value === "number" && cell?.format === "currency"
                       ? new Intl.NumberFormat("it-IT", {
@@ -258,7 +475,19 @@ export default function Spreadsheet({
                   return (
                     <td
                       key={id}
-                      className={selected === id ? "selected" : ""}
+                      className={`${selected === id ? "selected" : ""} ${
+                        sheet.tables?.some((t) => {
+                          const a = rangeCells(sheet, t.range);
+                          return (
+                            r >= a.top &&
+                            r <= a.bottom &&
+                            c >= a.left &&
+                            c <= a.right
+                          );
+                        })
+                          ? "table-cell"
+                          : ""
+                      }`}
                       style={{
                         fontWeight: cell?.bold ? "bold" : undefined,
                         fontStyle: cell?.italic ? "italic" : undefined,
@@ -277,6 +506,9 @@ export default function Spreadsheet({
                             setFormula(undefined);
                           }}
                           save={(value) => update(id, { value })}
+                          paste={(value) =>
+                            attempt(() => pasteCells(sheet, id, value))
+                          }
                         />
                       ) : (
                         <button
@@ -295,8 +527,37 @@ export default function Spreadsheet({
                 })}
               </tr>
             ))}
+            {start + visibleRows.length < rows.length && (
+              <tr aria-hidden="true">
+                <td
+                  colSpan={sheet.columns + 1}
+                  style={{
+                    height: (rows.length - start - visibleRows.length) * 36,
+                    padding: 0,
+                  }}
+                />
+              </tr>
+            )}
           </tbody>
         </table>
+      </div>
+      <div className="sheet-charts">
+        {sheet.charts?.map((chart) => (
+          <div key={chart.id}>
+            <Chart sheet={sheet} chart={chart} />
+            <button
+              disabled={readOnly}
+              onClick={() =>
+                commit({
+                  ...sheet,
+                  charts: sheet.charts?.filter((c) => c.id !== chart.id),
+                })
+              }
+            >
+              Rimuovi grafico {chart.title}
+            </button>
+          </div>
+        ))}
       </div>
     </section>
   );

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 export const callbackBase = 'ultrapad://auth/callback';
 export const oauthLifetime = 5 * 60 * 1000;
-export const contentPolicy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; object-src 'none'; frame-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'";
+export const contentPolicy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; object-src 'none'; frame-src 'self' blob: https://www.google.com; base-uri 'none'; frame-ancestors 'none'";
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.svg':'image/svg+xml', '.woff':'font/woff', '.woff2':'font/woff2', '.wasm':'application/wasm', '.gz':'application/gzip', '.png':'image/png', '.ico':'image/x-icon' };
 
 export function httpsOrigin(value) {

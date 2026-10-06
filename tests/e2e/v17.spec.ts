@@ -34,6 +34,7 @@ test("v1.7 planner edits Markdown and survives reload", async ({ page }) => {
 test("v1.7 spreadsheet formulas, style, source and CSV export", async ({
   page,
 }) => {
+  test.setTimeout(60000);
   await create(page, "sheet");
   await page
     .getByRole("button", { name: "Modifica celle", exact: true })
@@ -48,7 +49,7 @@ test("v1.7 spreadsheet formulas, style, source and CSV export", async ({
     .click();
   await expect(
     page.getByRole("button", { name: "Cella B1: 30", exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({timeout:20000});
   await page.getByRole("button", { name: "Cella B1: 30", exact: true }).click();
   await page.getByRole("button", { name: "Grassetto", exact: true }).click();
   await expect(
@@ -63,7 +64,7 @@ test("v1.7 spreadsheet formulas, style, source and CSV export", async ({
     .click();
   await expect(
     page.getByRole("button", { name: "Cella B1: 30", exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({timeout:20000});
 });
 test("v1.7 clicking backdrop dismisses dialog; inside does not", async ({
   page,

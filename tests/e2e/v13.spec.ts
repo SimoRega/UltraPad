@@ -20,7 +20,7 @@ test('v1.3 dedicated temporary workspace closes without deleting the draft',asyn
  await page.getByRole('button',{name:'Chiudi memo.txt'}).click();await expect(page).toHaveURL('/temporary');await page.getByRole('button',{name:'memo.txt',exact:true}).click();await expect(page.getByRole('textbox',{name:'Contenuto memo.txt'})).toHaveText('Da conservare');
 });
 test('v1.3 rail expands workspace names and home preview never opens an editor',async({page})=>{
- await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'Espandi sidebar workspace'}).click();await expect(page.getByRole('button',{name:'Test workspace',exact:true})).toHaveText('Test workspace');
+ await signedIn(page);await page.goto('/');await page.getByRole('button',{name:'Espandi sidebar workspace'}).click();await expect(page.getByRole('button',{name:'Test workspace',exact:true}).locator('.rail-label')).toHaveText('Test workspace');
  await page.getByRole('button',{name:'Anteprima di idee.md'}).first().click();await expect(page.getByRole('dialog')).toHaveText(/Anteprima · idee.md/);await expect(page.locator('.preview')).toBeVisible();await expect(page.locator('.editor-region')).toHaveCount(0);await page.keyboard.press('Escape');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

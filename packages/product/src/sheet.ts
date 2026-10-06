@@ -7,12 +7,21 @@ export type Cell = {
   format?: "number" | "currency" | "percent";
   align?: "left" | "center" | "right";
 };
+export type SheetTable = { id: string; name: string; range: string };
+export type SheetChart = {
+  id: string;
+  title: string;
+  range: string;
+  type: "bar" | "line" | "pie";
+};
 export type Sheet = {
   format: "ultrapad-sheet";
   version: 1;
   rows: number;
   columns: number;
   cells: Record<string, Cell>;
+  tables?: SheetTable[];
+  charts?: SheetChart[];
 };
 export const columnName = (n: number): string => {
   let s = "";
@@ -77,6 +86,33 @@ export function parseSheet(text: string): Sheet {
     )
       throw Error("Formato non valido.");
   }
+  for (const collection of [s.tables, s.charts]) {
+    if (
+      collection !== undefined &&
+      (!Array.isArray(collection) || collection.length > 20)
+    )
+      throw Error("Troppe tabelle o grafici.");
+    const ids = new Set<string>();
+    for (const item of collection ?? []) {
+      if (
+        !item ||
+        typeof item.id !== "string" ||
+        !item.id ||
+        item.id.length > 80 ||
+        ids.has(item.id)
+      )
+        throw Error("Identità tabella/grafico non valida.");
+      ids.add(item.id);
+      rangeCells(s, item.range);
+      const title = item.name ?? item.title;
+      if (typeof title !== "string" || !title.trim() || title.length > 120)
+        throw Error("Titolo non valido.");
+    }
+  }
+  if (
+    s.charts?.some((c: SheetChart) => !["bar", "line", "pie"].includes(c.type))
+  )
+    throw Error("Tipo grafico non valido.");
   return s;
 }
 export function cellValue(
@@ -84,22 +120,29 @@ export function cellValue(
   key: string,
   seen = new Set<string>(),
   budget = { left: 10000 },
+  cache?: Map<string, string | number>,
 ): string | number {
-  if (--budget.left < 0) return "#LIMIT!";
   if (seen.has(key) || seen.size > 100) return "#CYCLE!";
+  if (--budget.left < 0) return "#LIMIT!";
+  if (cache?.has(key)) return cache.get(key)!;
+  const result = (value: string | number) => {
+    cache?.set(key, value);
+    return value;
+  };
   const value = sheet.cells[key]?.value ?? "";
   if (!value.startsWith("="))
-    return value !== "" && Number.isFinite(Number(value))
-      ? Number(value)
-      : value;
+    return result(
+      value !== "" && Number.isFinite(Number(value)) ? Number(value) : value,
+    );
   const path = new Set(seen).add(key);
   const ref = (k: string): number => {
     if (
       k.charCodeAt(0) - 65 >= sheet.columns ||
+      Number(k.slice(1)) < 1 ||
       Number(k.slice(1)) > sheet.rows
     )
       throw Error("#REF!");
-    const v = cellValue(sheet, k, path, budget);
+    const v = cellValue(sheet, k, path, budget, cache);
     if (typeof v === "string" && v.startsWith("#")) throw Error(v);
     if (v === "") return 0;
     if (typeof v !== "number") throw Error("#VALUE!");
@@ -111,23 +154,46 @@ export function cellValue(
       .toUpperCase()
       .replace(/\s+/g, "")
       .replace(
-        /(SUM|SOMMA|AVERAGE|MEDIA|MIN|MAX)\(([A-Z])(\d+):([A-Z])(\d+)\)/g,
+        /(SUM|SOMMA|AVERAGE|MEDIA|MIN|MAX|COUNT|COUNTA)\(([A-Z])(\d+):([A-Z])(\d+)\)/g,
         (_m, fn, a, r, b, t) => {
           const start = +r,
             end = +t;
           if (start < 1 || end > sheet.rows || a > b || start > end)
             throw Error("#REF!");
-          const values: number[] = [];
+          if (b.charCodeAt(0) - 65 >= sheet.columns) throw Error("#REF!");
+          const values: (string | number)[] = [];
           for (let col = a.charCodeAt(0); col <= b.charCodeAt(0); col++)
-            for (let row = start; row <= end; row++)
-              values.push(ref(String.fromCharCode(col) + row));
+            for (let row = start; row <= end; row++) {
+              const v = cellValue(
+                sheet,
+                String.fromCharCode(col) + row,
+                path,
+                budget,
+                cache,
+              );
+              if (typeof v === "string" && v.startsWith("#")) throw Error(v);
+              values.push(v);
+            }
+          const numbers = values.filter(
+            (v): v is number => typeof v === "number",
+          );
+          if ((fn === "AVERAGE" || fn === "MEDIA") && !numbers.length)
+            throw Error("#DIV/0!");
           return String(
-            fn === "MIN"
-              ? Math.min(...values)
-              : fn === "MAX"
-                ? Math.max(...values)
-                : values.reduce((a, b) => a + b, 0) /
-                  (fn === "AVERAGE" || fn === "MEDIA" ? values.length : 1),
+            fn === "COUNTA"
+              ? values.filter((v) => v !== "").length
+              : fn === "COUNT"
+                ? numbers.length
+                : fn === "MIN"
+                  ? numbers.length
+                    ? Math.min(...numbers)
+                    : 0
+                  : fn === "MAX"
+                    ? numbers.length
+                      ? Math.max(...numbers)
+                      : 0
+                    : numbers.reduce((a, b) => a + b, 0) /
+                      (fn === "AVERAGE" || fn === "MEDIA" ? numbers.length : 1),
           );
         },
       );
@@ -174,9 +240,9 @@ export function cellValue(
     }
     const n = expr();
     if (i !== input.length || !Number.isFinite(n)) throw Error("#ERROR!");
-    return n;
+    return result(n);
   } catch (e) {
-    return e instanceof Error ? e.message : "#ERROR!";
+    return result(e instanceof Error ? e.message : "#ERROR!");
   }
 }
 function csvValue(v: string | number): string {
@@ -213,4 +279,89 @@ export function textPatch(before: string, after: string) {
     b--;
   }
   return { start, length: a - start, text: after.slice(start, b) };
+}
+
+export function rangeCells(
+  sheet: Pick<Sheet, "rows" | "columns">,
+  range: string,
+) {
+  const match =
+    typeof range === "string" &&
+    range.toUpperCase().match(/^([A-Z])([1-9]\d{0,2}):([A-Z])([1-9]\d{0,2})$/);
+  if (!match) throw Error("Intervallo non valido: usa A1:B10.");
+  const left = match[1].charCodeAt(0) - 65,
+    top = Number(match[2]) - 1,
+    right = match[3].charCodeAt(0) - 65,
+    bottom = Number(match[4]) - 1;
+  if (
+    left > right ||
+    top > bottom ||
+    right >= sheet.columns ||
+    bottom >= sheet.rows
+  )
+    throw Error("Intervallo fuori dal foglio.");
+  return { left, top, right, bottom };
+}
+export function sheetEvaluator(sheet: Sheet) {
+  const cache = new Map<string, string | number>(),
+    budget = { left: 250000 };
+  return (id: string) =>
+    cache.has(id)
+      ? cache.get(id)!
+      : cellValue(sheet, id, new Set(), budget, cache);
+}
+export function pasteCells(sheet: Sheet, start: string, text: string): Sheet {
+  const anchor = rangeCells(sheet, `${start}:${start}`),
+    values = text
+      .replace(/\r\n?/g, "\n")
+      .replace(/\n$/, "")
+      .split("\n")
+      .map((row) => row.split("\t"));
+  if (
+    values.length + anchor.top > sheet.rows ||
+    values.some((row) => row.length + anchor.left > sheet.columns)
+  )
+    throw Error("Dati incollati fuori dal foglio: aggiungi righe o colonne.");
+  const cells = { ...sheet.cells };
+  values.forEach((row, r) =>
+    row.forEach((value, c) => {
+      if (value.length > 10000) throw Error("Cella troppo lunga.");
+      const id = columnName(anchor.left + c) + (anchor.top + r + 1);
+      cells[id] = { ...cells[id], value };
+    }),
+  );
+  return { ...sheet, cells };
+}
+export function sortTable(
+  sheet: Sheet,
+  table: SheetTable,
+  column: number,
+  descending = false,
+): Sheet {
+  const area = rangeCells(sheet, table.range),
+    value = sheetEvaluator(sheet);
+  if (column < area.left || column > area.right)
+    throw Error("Seleziona una colonna della tabella.");
+  const order = Array.from(
+    { length: area.bottom - area.top },
+    (_, i) => area.top + i + 1,
+  ).sort((a, b) => {
+    const x = value(columnName(column) + (a + 1)),
+      y = value(columnName(column) + (b + 1));
+    return (
+      (typeof x === "number" && typeof y === "number"
+        ? x - y
+        : String(x).localeCompare(String(y), "it", { numeric: true })) *
+      (descending ? -1 : 1)
+    );
+  });
+  const cells = { ...sheet.cells };
+  order.forEach((source, i) => {
+    for (let c = area.left; c <= area.right; c++) {
+      const to = columnName(c) + (area.top + i + 2),
+        from = columnName(c) + (source + 1);
+      cells[to] = { ...(sheet.cells[from] ?? { value: "" }) };
+    }
+  });
+  return { ...sheet, cells };
 }

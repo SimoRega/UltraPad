@@ -51,3 +51,10 @@ it('presence requires authentication before disclosing session identities',async
  const response=await app.fetch(new Request('http://127.0.0.1:8787/v1/files/00000000-0000-4000-8000-000000000001/presence',{headers:{Origin:bindings.APP_ORIGIN}}),bindings);
  expect(response.status).toBe(401);expect(await response.json()).toMatchObject({error:'UNAUTHORIZED'});
 });
+
+it('Maps resolver remains public but rejects arbitrary hosts and wrong origins',async()=>{
+ const response=await app.fetch(new Request('http://api/maps-preview?url=https%3A%2F%2F127.0.0.1%2Fadmin',{headers:{Origin:bindings.APP_ORIGIN}}),bindings);
+ expect(response.status).toBe(400);expect(await response.json()).toMatchObject({error:'MAPS_PREVIEW_UNAVAILABLE'});
+ const denied=await app.fetch(new Request('http://api/maps-preview?url=https%3A%2F%2Fmaps.app.goo.gl%2Fabc',{headers:{Origin:'https://untrusted.invalid'}}),bindings);expect(denied.status).toBe(403);
+ const full=await app.fetch(new Request('http://api/maps-preview?url='+encodeURIComponent('https://www.google.com/maps/place/Kyoto'),{headers:{Origin:bindings.APP_ORIGIN}}),bindings);expect(full.status).toBe(200);expect(await full.json()).toEqual({url:'https://www.google.com/maps/place/Kyoto'});
+});
