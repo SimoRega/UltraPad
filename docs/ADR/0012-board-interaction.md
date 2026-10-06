@@ -1,4 +1,4 @@
-# ADR 0011 — Lavagna interattiva 1.9
+# ADR 0012 — Lavagna interattiva 1.9
 
 Accettato per la richiesta del proprietario del 6 ottobre 2026: movimento con mouse e pennello a mano libera. Estende l'ambito della sezione 15 dell'SDD e l'MVP asincrono dell'ADR 0008.
 

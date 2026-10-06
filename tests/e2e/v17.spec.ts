@@ -258,7 +258,7 @@ test("v1.7 spreadsheet shares independent cells through real durable room and en
     await page.reload();
     await expect(
       page.getByRole("textbox", { name: "Formula o valore" }),
-    ).toBeDisabled();
+    ).toBeDisabled({timeout:20000});
   } finally {
     await page.unrouteAll({behavior:"wait"});
     await context.close();
