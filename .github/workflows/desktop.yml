@@ -1,7 +1,7 @@
 name: Build UltraPad Desktop
 on:
   push:
-    branches: [main, 'feat/electron-desktop']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -25,6 +25,11 @@ jobs:
           ULTRAPAD_ELECTRON_EXECUTABLE: ${{ github.workspace }}\apps\desktop\out\UltraPad-win32-x64\UltraPad.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: UltraPad-Windows-x64
-          path: apps/desktop/out/make/**
+          name: UltraPad-Windows-Installer
+          path: apps/desktop/out/make/squirrel.windows/x64/UltraPad-Setup.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UltraPad-Windows-Portable
+          path: apps/desktop/out/make/zip/win32/x64/*.zip
           if-no-files-found: error

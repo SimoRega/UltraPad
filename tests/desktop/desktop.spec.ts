@@ -87,3 +87,18 @@ test('OAuth cancellation permits retry and shell refuses arbitrary URLs', async 
   await page.getByRole('button',{name:'Continua senza account',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Il tuo spazio ospite'})).toBeVisible();
 });
+
+test('offline source editor imports Markdown, previews it and saves a native download', async () => {
+  await page.context().setOffline(true);
+  await page.getByRole('button',{name:'Continua senza account',exact:true}).click();
+  await page.getByLabel('Importa file ospite').setInputFiles({name:'desktop.md',mimeType:'text/plain',buffer:Buffer.from('# Desktop locale')});
+  await expect(page.locator('.view-lines')).toContainText('# Desktop locale', {timeout:15000});
+  await page.getByRole('button',{name:'Anteprima affiancata'}).click();
+  await expect(page.frameLocator('iframe').getByRole('heading',{name:'Desktop locale'})).toBeVisible();
+  const path = join(userData, 'desktop.md');
+  await app.evaluate(({session}, path) => {
+    session.fromPartition('persist:ultrapad-desktop').once('will-download', (_event, item) => item.setSavePath(path));
+  }, path);
+  await page.getByRole('button',{name:'Scarica copia locale',exact:true}).click();
+  await expect.poll(async()=>{try{return await readFile(path,'utf8');}catch{return '';}}).toBe('# Desktop locale');
+});

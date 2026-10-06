@@ -35,7 +35,8 @@ L'installer crea i collegamenti del menu Start e registra il protocollo
 installare con Setup: lo ZIP da solo non registra automaticamente il protocollo.
 
 GitHub Actions → **Build UltraPad Desktop** → esecuzione riuscita →
-**UltraPad-Windows-x64** contiene installer, ZIP e file Squirrel.
+**UltraPad-Windows-Installer** contiene `UltraPad-Setup.exe`.
+**UltraPad-Windows-Portable** contiene lo ZIP senza installazione.
 Non è una release pubblicata automaticamente: i file sono artifact della CI.
 Gli installer sono al momento **non firmati**; Windows può mostrare un avviso
 sull'editore. Firma e distribuzione commerciale richiedono credenziali dedicate.

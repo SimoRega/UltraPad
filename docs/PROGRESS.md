@@ -7,14 +7,16 @@ Nessuna migrazione DB o deploy Worker/Pages. Guida: DESKTOP.md; ADR 0010.
 
 Verificati typecheck/lint, 31 unità/PGlite, 21 workerd, 6 unità desktop,
 3 setup, 2 contratto runner, build frontend/Worker e packaging Linux.
-Tre E2E con Electron reale passati: ospite offline/reload e isolamento,
-OAuth PKCE/callback falsi/replay, annullamento. Nel container gestito la
+Quattro E2E con Electron reale passati: ospite offline/reload e isolamento,
+OAuth PKCE/callback falsi/replay, annullamento, import Markdown e download locale. Nel container gestito la
 prova Electron richiede Xvfb locale e un launcher temporaneo che evita
 requestSingleInstanceLock (socket AF_UNIX non consentiti); il workaround
 non entra nel repository o nella distribuzione. La CI Windows esegue la
 suite sul vero eseguibile pacchettizzato senza quel workaround.
 
-La regressione web e la build/test Windows sono in verifica. Consenso
+Installer Windows generato dalla CI e primi tre test sul vero eseguibile
+pacchettizzato passati. Aggiunto un quarto test import/download e download
+separati per installer e ZIP. La regressione web finale è in verifica. Consenso
 OAuth reale, allowlist Supabase, callback OS dopo installazione pulita,
 firma e auto-update restano gate distinti: non dichiarati verificati.
 
