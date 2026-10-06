@@ -1,3 +1,9 @@
+# Aggiornamento 1.10 — 6 ottobre 2026
+
+Sidebar espansa con Collassa, logo UltraPad, emoji/nome workspace, Cestino, Tema e profilo. Drag nativo file testuali verso cartelle dello stesso progetto con RPC move_file e metadata_version, conferma server ed errori visibili. Tab riordinabili senza navigazione; X SVG centrata e marcata, bordi da 2 px. Versioni web/desktop 1.10.0 e cache v1.10. ADR 0013 e V1_10.md. Nessuna nuova migrazione o deploy remoto.
+
+Verificati typecheck/lint, 34 unità/PGlite, 21 integrazione workerd, build frontend/Worker dry-run e 5 E2E mirati 1.10/1.8. Le tre nuove prove coprono etichette sidebar, X/bordo, drag con conflitto e successiva conferma/reload, riordino senza cambiare file attivo, chiusura e viewer. Auth e metadati browser sono fixture; nessun OAuth/cloud/installer 1.10 certificato. Le prime prove drag usavano coordinate su righe fuori dalla porzione visibile dell'albero: le verifiche finali usano viewport esplicita e scroll per la visibilità dei bersagli.
+
 # Aggiornamento 1.9 — 6 ottobre 2026
 
 Trascinamento di schede/tratti con mouse, pennello colore/spessore, undo, anteprime dei collegamenti, coordinate corrette con zoom/scroll e recupero esplicito di salvataggi falliti. ADR 0012 e V1_9.md. Migrazione 010 obbligatoria prima del frontend, nessuna migrazione/deploy remoto eseguito. Versione web/desktop 1.9.0 e cache v1.9. Corretto anche il checkpoint SQL (alias b ambiguo).
