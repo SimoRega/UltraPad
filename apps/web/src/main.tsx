@@ -30,6 +30,7 @@ import Dashboard from './Dashboard';
 import {Modal,FileActions,TopicDialog,useConfirmation} from './Dialogs';
 import { documentFile, type RichOp } from '../../../packages/rich-text/src/index';
 import './style.css';
+import { desktop } from './desktop';
 const Editor = lazy(() => import('./Editor'));
 const GuestApp = lazy(() => import('./GuestApp'));
 const guestModeKey='ultrapad-guest-mode';
@@ -58,6 +59,15 @@ function App() {
   });
   const [signingIn,setSigningIn]=useState<'google'|'github'|null>(null);
   useEffect(() => {
+    if (!desktop || !auth || guest) return;
+    return desktop.onOAuthResult(result => {
+      if (result.error || !result.code) { setLoginError(result.error ?? 'Accesso non completato. Riprova.');setSigningIn(null);return; }
+      void auth!.auth.exchangeCodeForSession(result.code).then(({ error }) => {
+        if (error) setLoginError('Accesso non completato. Riprova e verifica il redirect desktop in Supabase.');
+      }).catch(() => setLoginError('Connessione al servizio di login non riuscita. Riprova.')).finally(() => setSigningIn(null));
+    });
+  }, [guest]);
+  useEffect(() => {
     if (!auth || guest) return;
     let active=true;
     auth.auth.getSession().then(({ data, error }) => { if(active) {setSession(data.session);if(error)setLoginError('Sessione non recuperabile. Riprova ad accedere.');setLoaded(true);} }).catch(()=>{if(active){setLoginError('Connessione al servizio di login non riuscita. Verifica la rete e riprova.');setLoaded(true);}});
@@ -68,14 +78,16 @@ function App() {
     if(!auth || signingIn)return;
     setSigningIn(provider);setLoginError('');
     try {
-      const {error}=await auth.auth.signInWithOAuth({provider,options:{redirectTo:new URL('/',window.location.origin).href}});
+      const redirectTo = desktop ? (await desktop.prepareOAuth()).redirectTo : new URL('/',window.location.origin).href;
+      const {data,error}=await auth.auth.signInWithOAuth({provider,options:{redirectTo,skipBrowserRedirect:Boolean(desktop)}});
       if(error) throw error;
-    } catch { setLoginError('Accesso non avviato. Verifica la connessione e la configurazione del provider in Supabase.');setSigningIn(null); }
+      if (desktop) { if (!data.url) throw new Error('URL di accesso mancante'); await desktop.openOAuth(data.url); }
+    } catch { if(desktop)void desktop.cancelOAuth().catch(()=>undefined);setLoginError('Accesso non avviato. Verifica la connessione e la configurazione del provider in Supabase.');setSigningIn(null); }
   }
   if(guest)return <Boundary><Suspense fallback={<div className="empty">Caricamento spazio ospite…</div>}><GuestApp leave={leaveGuest}/></Suspense></Boundary>;
   if (!configured) return <main className="landing"><div className="brand"><b>U</b> UltraPad</div><h1>Uno spazio per<br /><em>pensare insieme.</em></h1><p>Note, codice e progetti. Condivisione in tempo reale e lavoro recuperabile.</p><div className="setup"><h2>Configura il tuo ambiente</h2><p>Imposta le tre variabili pubbliche in <code>.env</code>, applica la migrazione SQL e configura il backend. Le istruzioni complete sono in <code>docs/DEPLOY.md</code>.</p><p>Questa schermata indica un ambiente non configurato.</p><button onClick={enterGuest}>Continua senza account</button></div></main>;
   if (!loaded) return <main className="landing"><p>Caricamento sessione…</p><button onClick={enterGuest}>Continua senza account</button></main>;
-  if (!session) return <main className="landing"><div className="brand"><b>U</b> UltraPad</div><h1>Il tuo prossimo progetto,<br /><em>in buona compagnia.</em></h1><p>Scrivi note, modifica codice e condividi idee nello stesso spazio.</p>{loginError && <div className="notice" role="alert">{loginError}</div>}<div className="login-actions"><button className="primary" disabled={Boolean(signingIn)} onClick={() => void signIn('google')}>{signingIn==='google'?'Reindirizzamento a Google…':'Accedi con Google →'}</button><button disabled={Boolean(signingIn)} onClick={() => void signIn('github')}>{signingIn==='github'?'Reindirizzamento a GitHub…':'Accedi con GitHub →'}</button><button disabled={Boolean(signingIn)} onClick={enterGuest}>Continua senza account</button></div><p className="muted">Senza account: spazio vuoto, file solo in questa scheda, nessun salvataggio nel database.</p><p className="muted">TXT · Markdown · JSON · XML · Java · C# · LaTeX come sorgente</p></main>;
+  if (!session) return <main className="landing"><div className="brand"><b>U</b> UltraPad</div><h1>Il tuo prossimo progetto,<br /><em>in buona compagnia.</em></h1><p>Scrivi note, modifica codice e condividi idee nello stesso spazio.</p>{loginError && <div className="notice" role="alert">{loginError}</div>}<div className="login-actions"><button className="primary" disabled={Boolean(signingIn)} onClick={() => void signIn('google')}>{signingIn==='google'?'Reindirizzamento a Google…':'Accedi con Google →'}</button><button disabled={Boolean(signingIn)} onClick={() => void signIn('github')}>{signingIn==='github'?'Reindirizzamento a GitHub…':'Accedi con GitHub →'}</button><button disabled={Boolean(signingIn)} onClick={enterGuest}>Continua senza account</button>{desktop&&signingIn&&<button onClick={()=>void desktop!.cancelOAuth().then(()=>setSigningIn(null)).catch(()=>setSigningIn(null))}>Annulla accesso</button>}</div><p className="muted">Senza account: spazio vuoto, file solo in questa scheda, nessun salvataggio nel database.</p><p className="muted">TXT · Markdown · JSON · XML · Java · C# · LaTeX come sorgente</p></main>;
   return <Routes><Route path="/workspaces/:workspaceRouteId" element={<WorkspaceApp key={session.user.id} session={session} />} /><Route path="/temporary" element={<WorkspaceApp key={session.user.id} session={session} />} /><Route path="/scratch/:draftId" element={<WorkspaceApp key={session.user.id} session={session} />} /><Route path="/" element={<WorkspaceApp key={session.user.id} session={session} />} /><Route path="/projects/:projectId/files/:fileId" element={<WorkspaceApp key={session.user.id} session={session} />} /><Route path="/projects/:projectId" element={<WorkspaceApp key={session.user.id} session={session} />} /></Routes>;
 }
 function WorkspaceApp({ session }: { session: Session }) {
@@ -202,4 +214,4 @@ function WorkspaceApp({ session }: { session: Session }) {
   </main>;
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={queryClient}><ThemeProvider><BrowserRouter><App /></BrowserRouter></ThemeProvider></QueryClientProvider></React.StrictMode>);
-if (import.meta.env.PROD && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+if (import.meta.env.PROD && !desktop && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);

@@ -1,3 +1,23 @@
+# Client desktop Electron — 6 ottobre 2026
+
+Su richiesta del proprietario, aggiunto apps/desktop con frontend 1.7 incluso,
+Electron 44.5.1 e Forge 8.0.1, sandbox/isolation, origine HTTPS canonica,
+menu/dialog nativi, protocollo OAuth con nonce/PKCE, installer Windows e ZIP.
+Nessuna migrazione DB o deploy Worker/Pages. Guida: DESKTOP.md; ADR 0010.
+
+Verificati typecheck/lint, 31 unità/PGlite, 21 workerd, 6 unità desktop,
+3 setup, 2 contratto runner, build frontend/Worker e packaging Linux.
+Tre E2E con Electron reale passati: ospite offline/reload e isolamento,
+OAuth PKCE/callback falsi/replay, annullamento. Nel container gestito la
+prova Electron richiede Xvfb locale e un launcher temporaneo che evita
+requestSingleInstanceLock (socket AF_UNIX non consentiti); il workaround
+non entra nel repository o nella distribuzione. La CI Windows esegue la
+suite sul vero eseguibile pacchettizzato senza quel workaround.
+
+La regressione web e la build/test Windows sono in verifica. Consenso
+OAuth reale, allowlist Supabase, callback OS dopo installazione pulita,
+firma e auto-update restano gate distinti: non dichiarati verificati.
+
 # Aggiornamento 1.7 — 6 ottobre 2026
 
 Richiesta del proprietario: navigazione/ricerca/dialog, emoji workspace Android, planner calendario su Markdown e fogli testuali con toolbar e formule. ADR 0009 e V1_7.md descrivono formato, limiti, compatibilità e salvataggio. Nessuna nuova migrazione SQL/protocollo o deploy remoto dichiarato.

@@ -1,0 +1,13 @@
+{
+  "name": "ultrapad-desktop",
+  "productName": "UltraPad",
+  "version": "1.7.0",
+  "private": true,
+  "type": "module",
+  "description": "Note, codice e progetti collaborativi sul desktop",
+  "author": "Simone Rega",
+  "license": "UNLICENSED",
+  "main": "src/main.mjs",
+  "config": { "forge": "./forge.config.cjs" },
+  "devDependencies": { "electron": "44.5.1" }
+}
