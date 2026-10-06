@@ -17,6 +17,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      - run: node --test services/runner/runner.test.mjs
       - run: pnpm test:setup
       - run: pnpm test:integration
       - run: pnpm build

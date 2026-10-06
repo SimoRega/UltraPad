@@ -13,7 +13,7 @@ export async function request<T>(path: string, body?: unknown): Promise<T> {
   const { data: { session } } = await auth.auth.getSession();
   if (!session) throw new Error('Sessione scaduta. Accedi nuovamente.');
   let response: Response;
-  try { response=await fetch(`${apiUrl}/v1${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal:AbortSignal.timeout(30000) }); }
+  try { response=await fetch(`${apiUrl}/v1${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal:AbortSignal.timeout(path.endsWith('/execute')?70000:30000) }); }
   catch { throw new ApiConnectionError(); }
   let value: T & {error?:string;expectedOrigin?:string};
   try { value=await response.json() as T & {error?:string;expectedOrigin?:string}; }

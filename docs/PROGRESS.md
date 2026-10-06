@@ -1,3 +1,7 @@
+# Aggiornamento 1.6 — 6 ottobre 2026
+
+Implementazione delle issue #5–#22: toolbar/Focus/mobile/template, palette/preferiti/ricerca, centro recupero, guest transfer, export/diff/cestino/purge, inviti/commenti/link/board, Calderone/OCR/segreti, notebook e tesi PDF con runner separato, Office DOCX/RTF. Vedere V1_6.md e ADR 0008 per limiti e gate non verificati. Nessuna distribuzione/migrazione cloud o isolamento runtime è dichiarato verificato dai test locali.
+
 # Stato dell'implementazione — 5 ottobre 2026
 
 Il prototipo Electron è sostituito dall'implementazione web M0–M3/R1 prevista

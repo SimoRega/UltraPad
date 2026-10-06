@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
         }
       } } : undefined
     },
-    optimizeDeps: { include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react-router-dom', '@tanstack/react-query', '@supabase/supabase-js', 'yjs', 'y-protocols/awareness', 'idb', 'jszip', 'quill', 'quill-cursors'], exclude: ['monaco-editor', 'y-monaco', 'y-quill'], noDiscovery: false },
+    optimizeDeps: { include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react-router-dom', '@tanstack/react-query', '@supabase/supabase-js', 'yjs', 'y-protocols/awareness', 'idb', 'jszip', 'mammoth/mammoth.browser', 'tesseract.js', 'quill', 'quill-cursors'], exclude: ['monaco-editor', 'y-monaco', 'y-quill'], noDiscovery: false },
     build: { outDir: 'dist', chunkSizeWarningLimit: 4500 },
     define: { __BUILD_MODE__: JSON.stringify(mode), __CONFIGURED__: JSON.stringify(Boolean(variables.VITE_SUPABASE_URL)) }
   };

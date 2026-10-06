@@ -1,3 +1,7 @@
+# UltraPad 1.6
+
+Nuove funzionalità e attivazione: [guida v1.6](docs/V1_6.md). Applicare le migrazioni 005–009 prima del deploy. Notebook/PDF richiedono il servizio isolato documentato; nessun runtime viene eseguito nel Worker.
+
 # UltraPad
 
 Web app collaborativa per note e codice, implementata a partire dall'SDD
@@ -41,9 +45,7 @@ Versione 1.2: [novità e aggiornamento](docs/V1_2.md).
 - Quote server: 1 MiB testo, 8 MiB stato CRDT, 64 KiB frame, 500 file/progetto,
   10 editor/room, prenotazioni conservative di 100 MiB per workspace.
 
-DOC/DOCX/RTF, allegati, lavagna, commenti, esecuzione
-Java/C#/Python/JS e compilazione LaTeX richiedono le milestone successive.
-Java, C# e TEX sono modificabili come **sorgente testuale**, non eseguibili.
+La v1.6 aggiunge import DOCX/RTF, lavagna, commenti e pipeline JS/Python/LaTeX separata, con i limiti e gate indicati in [V1_6](docs/V1_6.md). DOC legacy, allegati generici e runtime Java/C# restano fuori da questa tranche. Senza runner configurato, i sorgenti restano modificabili ed esportabili.
 
 ## Avvio
 

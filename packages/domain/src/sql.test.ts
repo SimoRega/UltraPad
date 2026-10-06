@@ -14,6 +14,7 @@ async function mutate<T = { id: string }>(op: string, args: Record<string, unkno
 beforeAll(async()=>{
   await db.exec(`create schema auth; create schema extensions; create role anon; create role authenticated; create role service_role;
   create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+  create function auth.role() returns text language sql stable as $$select current_setting('role')$$;
   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
   grant usage on schema auth,public to authenticated; grant execute on function auth.uid() to authenticated;`);
   for(const [uid,email] of [[owner,'owner@test.invalid'],[viewer,'viewer@test.invalid'],[outsider,'other@test.invalid']]) await db.query('insert into auth.users values($1,$2,now())',[uid,email]);
@@ -24,6 +25,7 @@ beforeAll(async()=>{
   await db.exec(await readFile(new URL('../../../supabase/migrations/202610050002_checkpoints.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../../supabase/migrations/202610050003_quotas.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../../supabase/migrations/202610050004_v11.sql',import.meta.url),'utf8'));
+  for(const migration of ['202610060005_v16.sql','202610060006_collaboration.sql','202610060007_calderone.sql','202610060008_navigation.sql','202610060009_purge.sql']) await db.exec(await readFile(new URL('../../../supabase/migrations/'+migration,import.meta.url),'utf8'));
 },30000);
 afterAll(()=>db.close());
 it('executes the actual migration and enforces tenant RLS, roles, invites, FK and folder cycles',async()=>{
@@ -83,4 +85,29 @@ it('v1.1 creates atomic personal files, enforces private containers and protects
  await expect(mutate('create_standalone',{name:'../invalid'})).rejects.toThrow('INVALID_NAME');
  expect((await db.query('select * from public.workspaces where is_personal')).rows).toHaveLength(0);
  await asUser(owner);await mutate('delete_workspace',{id:a.workspace_id});
+},30000);
+it('v1.6 indexes committed content with RLS, monotonic revisions and soft-delete restore',async()=>{
+ await asUser(owner);const w=await mutate('create_workspace',{name:'V16'});const p=await mutate('create_project',{workspace_id:w.id,name:'Search'});const f=await mutate('create_file',{project_id:p.id,name:'indexed.txt',kind:'text'});
+ await db.query('select public.index_file($1,1,3,$2)',[f.id,'ricerca alpaca']);await db.query('select public.index_file($1,1,2,$2)',[f.id,'stale']);
+ expect((await db.query<{value:{id:string}[]}>("select public.search_files('alpaca') value")).rows[0].value.some(r=>r.id===f.id)).toBe(true);
+ await mutate('delete_file',{id:f.id});expect((await db.query<{value:unknown[]}>("select public.search_files('alpaca') value")).rows[0].value).toEqual([]);
+ await asUser(outsider);await expect(mutate('restore_deleted',{id:f.id})).rejects.toThrow('FORBIDDEN');expect((await db.query('select * from public.file_search')).rows).toEqual([]);
+ await asUser(owner);await mutate('restore_deleted',{id:f.id});expect((await db.query<{value:unknown[]}>("select public.search_files('alpaca') value")).rows[0].value).toHaveLength(1);
+ const source='00000000-0000-4000-8000-000000000050';const a=(await db.query<{value:{id:string}}>('select public.transfer_guest($1,$2) value',[source,'guest-v16.txt'])).rows[0].value;const b=(await db.query<{value:{id:string}}>('select public.transfer_guest($1,$2) value',[source,'different-name.txt'])).rows[0].value;expect(a.id).toBe(b.id);
+},30000);
+it('v1.6 collaboration and private vault enforce ACL and compare-and-swap including missing versions',async()=>{
+ await asUser(owner);const w=await mutate('create_workspace',{name:'ACL16'});const p=await mutate('create_project',{workspace_id:w.id,name:'ACL16'});const f=await mutate('create_file',{project_id:p.id,name:'comments.txt',kind:'text'});
+ const collaborate=async(op:string,args:Record<string,unknown>)=>(await db.query<{value:{id:string;version:number}}>('select public.collaborate($1,$2) value',[op,JSON.stringify(args)])).rows[0].value;
+ const thread=await collaborate('thread',{file_id:f.id,generation:1,body:'comment',anchor:{}});await expect(collaborate('thread',{file_id:f.id,body:'missing gen'})).rejects.toThrow('GENERATION_CHANGED');
+ await mutate('create_invite',{project_id:p.id,email:'viewer@test.invalid',role:'viewer',token_hash:'v16viewer'});await asUser(viewer);await mutate('accept_invite',{token_hash:'v16viewer'});await expect(collaborate('reply',{thread_id:thread.id,body:'blocked'})).rejects.toThrow('FORBIDDEN');
+ await asUser(owner);await mutate('set_member',{project_id:p.id,user_id:viewer,role:'commenter'});await asUser(viewer);await collaborate('reply',{thread_id:thread.id,body:'allowed'});await expect(collaborate('board_put',{id:crypto.randomUUID(),project_id:p.id,kind:'note',version:0})).rejects.toThrow('FORBIDDEN');
+ await asUser(owner);const bid=crypto.randomUUID();const card=await collaborate('board_put',{id:bid,project_id:p.id,kind:'note',version:0,body:'hello'});expect(card.version).toBe(1);await expect(collaborate('board_put',{id:bid,project_id:p.id,kind:'note',body:'overwrite'})).rejects.toThrow('BOARD_CONFLICT');
+ const vid=crypto.randomUUID();const save=async(args:Record<string,unknown>)=>db.query('select public.save_calderone($1) value',[JSON.stringify(args)]);await save({id:vid,version:0,title:'secret',body:'cipher',encrypted:true});await expect(save({id:vid,title:'secret',body:'overwrite'})).rejects.toThrow('ENTRY_CONFLICT');
+ await asUser(outsider);expect((await db.query('select * from public.calderone')).rows).toEqual([]);expect((await db.query('select * from public.comments')).rows).toEqual([]);await expect(save({id:vid,version:1,title:'steal',body:'x'})).rejects.toThrow('ENTRY_CONFLICT');
+},30000);
+it('purge freezes restore, validates tenant, and finalizes idempotently with quota cascade',async()=>{
+ await asUser(owner);const w=await mutate('create_workspace',{name:'Purge16'}),p=await mutate('create_project',{workspace_id:w.id,name:'Purge16'}),f=await mutate('create_file',{project_id:p.id,name:'purge.txt',kind:'text'});
+ await db.query('select public.reserve_document_bytes($1,1,100)',[f.id]);await expect(db.query('select public.begin_purge($1)',[f.id])).rejects.toThrow('NOT_TRASHED');await mutate('delete_file',{id:f.id});
+ await asUser(outsider);await expect(db.query('select public.begin_purge($1)',[f.id])).rejects.toThrow('FORBIDDEN');await asUser(owner);const job=await db.query('select public.begin_purge($1)',[f.id]);expect(job.rows).toHaveLength(1);await expect(mutate('restore_deleted',{id:f.id})).rejects.toThrow('PURGE_IN_PROGRESS');await expect(db.query('select public.finish_purge($1)',[f.id])).rejects.toThrow('permission denied');
+ await db.exec('RESET ROLE;SET ROLE service_role');await db.query('select public.finish_purge($1)',[f.id]);await db.query('select public.finish_purge($1)',[f.id]);expect((await db.query('select * from public.resource_reservations where file_id=$1',[f.id])).rows).toHaveLength(0);await asUser(owner);expect((await db.query('select * from public.files where id=$1',[f.id])).rows).toHaveLength(0);
 },30000);

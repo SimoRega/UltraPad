@@ -3,6 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+  tesseract.js: false
   workerd: true
 overrides:
   shell-quote: 1.9.0
