@@ -3,12 +3,14 @@ import { request } from "../api";
 import { Modal } from "../Dialogs";
 import type { FileRecord } from "../../../../packages/contracts/src/index";
 export default function Search({
+  initialQuery = "",
   close,
   open,
   projects,
   workspaces,
   commands,
 }: {
+  initialQuery?: string;
   close: () => void;
   open: (f: FileRecord, query: string) => void;
   projects: { id: string; name: string; workspace_id: string }[];
@@ -19,7 +21,7 @@ export default function Search({
   const [author, setAuthor] = useState("");
   const [since, setSince] = useState("");
   const [reindex, setReindex] = useState(false);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   const [rows, setRows] = useState<
     (FileRecord & { excerpt?: string; indexed_at?: string })[]
   >([]);

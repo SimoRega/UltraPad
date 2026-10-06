@@ -1,3 +1,4 @@
+import {emptySheet} from '../../../../packages/product/src/sheet';
 export const templates = [
   {
     id: "blank",
@@ -6,6 +7,7 @@ export const templates = [
     text: "",
     note: "Documento visuale; gli stili richiedono il formato UltraPad.",
   },
+  {id:"sheet",label:"Foglio di calcolo",name:"foglio.sheet.json",text:JSON.stringify(emptySheet(),null,2),note:"Celle, formule e formattazione; sorgente JSON e export CSV."},
   {
     id: "diary",
     label: "Diario",
@@ -32,8 +34,8 @@ export const templates = [
       id: period,
       label: `Planner ${period}`,
       name: `planner-${period}.md`,
-      text: `# Planner ${period}\n\n## Obiettivi\n\n${(i === 0 ? ["Mattina", "Pomeriggio", "Sera"] : i === 1 ? ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"] : i === 2 ? ["Settimana 1", "Settimana 2", "Settimana 3", "Settimana 4", "Settimana 5"] : ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]).map((v) => `## ${v}\n\n- [ ] \n`).join("\n")}\n## Bilancio\n`,
-      note: "Markdown: sezioni modificabili e anteprima.",
+      text: `# Planner ${period}\n\n## Obiettivi\n\n${(i === 0 ? ["Mattina", "Pomeriggio", "Sera"] : i === 1 ? ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"] : i === 2 ? Array.from({length:31},(_,i)=>`Giorno ${i+1}`) : ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]).map((v) => `## ${v}\n\n- [ ] \n`).join("\n")}\n## Bilancio\n`,
+      note: "Calendario visuale sul file Markdown; ogni sezione conserva attività e note.",
     }),
   ),
   {

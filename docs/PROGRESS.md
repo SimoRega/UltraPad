@@ -1,3 +1,9 @@
+# Aggiornamento 1.7 — 6 ottobre 2026
+
+Richiesta del proprietario: navigazione/ricerca/dialog, emoji workspace Android, planner calendario su Markdown e fogli testuali con toolbar e formule. ADR 0009 e V1_7.md descrivono formato, limiti, compatibilità e salvataggio. Nessuna nuova migrazione SQL/protocollo o deploy remoto dichiarato.
+
+Verifiche locali 1.7: typecheck/lint, 31 unità/PGlite, 21 workerd, 3 setup, 2 contratto runner, 48 E2E regressioni e 5 nuovi E2E (planner, foglio/CSV, backdrop, workspace/ricerca, room condivisa/viewer). Build frontend e dry-run Worker passati. I due nuovi flussi con Auth fixture sono stati rieseguiti dopo aver corretto attese/cleanup del test; nessun OAuth o deploy remoto certificato.
+
 # Aggiornamento 1.6 — 6 ottobre 2026
 
 Implementazione delle issue #5–#22: toolbar/Focus/mobile/template, palette/preferiti/ricerca, centro recupero, guest transfer, export/diff/cestino/purge, inviti/commenti/link/board, Calderone/OCR/segreti, notebook e tesi PDF con runner separato, Office DOCX/RTF. Vedere V1_6.md e ADR 0008 per limiti e gate non verificati. Nessuna distribuzione/migrazione cloud o isolamento runtime è dichiarato verificato dai test locali.

@@ -3,7 +3,7 @@ import type { FileRecord } from '../../../packages/contracts/src/index';
 export function Modal({title,close,children}:{title:string;close:()=>void;children:ReactNode}) {
  const ref=useRef<HTMLDialogElement>(null);const label=useId();
  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;const dialog=ref.current;if(dialog&&!dialog.open)dialog.showModal();return()=>{dialog?.close();if(previous?.isConnected)previous.focus();};},[]);
- return <dialog ref={ref} aria-labelledby={label} onCancel={e=>{e.preventDefault();close();}}><header><h2 id={label}>{title}</h2><button aria-label="Chiudi" onClick={close}>×</button></header>{children}</dialog>;
+ return <dialog ref={ref} aria-labelledby={label} onClick={e=>{if(e.target!==e.currentTarget)return;const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}} onCancel={e=>{e.preventDefault();close();}}><header><h2 id={label}>{title}</h2><button aria-label="Chiudi" onClick={close}>×</button></header>{children}</dialog>;
 }
 export function useConfirmation(){
  const [question,setQuestion]=useState<{message:string;resolve:(value:boolean)=>void}>();const pending=useRef<(value:boolean)=>void>(undefined);
