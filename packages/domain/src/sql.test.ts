@@ -25,7 +25,7 @@ beforeAll(async()=>{
   await db.exec(await readFile(new URL('../../../supabase/migrations/202610050002_checkpoints.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../../supabase/migrations/202610050003_quotas.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../../../supabase/migrations/202610050004_v11.sql',import.meta.url),'utf8'));
-  for(const migration of ['202610060005_v16.sql','202610060006_collaboration.sql','202610060007_calderone.sql','202610060008_navigation.sql','202610060009_purge.sql']) await db.exec(await readFile(new URL('../../../supabase/migrations/'+migration,import.meta.url),'utf8'));
+  for(const migration of ['202610060005_v16.sql','202610060006_collaboration.sql','202610060007_calderone.sql','202610060008_navigation.sql','202610060009_purge.sql','202610060010_board_drawing.sql']) await db.exec(await readFile(new URL('../../../supabase/migrations/'+migration,import.meta.url),'utf8'));
 },30000);
 afterAll(()=>db.close());
 it('executes the actual migration and enforces tenant RLS, roles, invites, FK and folder cycles',async()=>{
@@ -110,4 +110,25 @@ it('purge freezes restore, validates tenant, and finalizes idempotently with quo
  await db.query('select public.reserve_document_bytes($1,1,100)',[f.id]);await expect(db.query('select public.begin_purge($1)',[f.id])).rejects.toThrow('NOT_TRASHED');await mutate('delete_file',{id:f.id});
  await asUser(outsider);await expect(db.query('select public.begin_purge($1)',[f.id])).rejects.toThrow('FORBIDDEN');await asUser(owner);const job=await db.query('select public.begin_purge($1)',[f.id]);expect(job.rows).toHaveLength(1);await expect(mutate('restore_deleted',{id:f.id})).rejects.toThrow('PURGE_IN_PROGRESS');await expect(db.query('select public.finish_purge($1)',[f.id])).rejects.toThrow('permission denied');
  await db.exec('RESET ROLE;SET ROLE service_role');await db.query('select public.finish_purge($1)',[f.id]);await db.query('select public.finish_purge($1)',[f.id]);expect((await db.query('select * from public.resource_reservations where file_id=$1',[f.id])).rows).toHaveLength(0);await asUser(owner);expect((await db.query('select * from public.files where id=$1',[f.id])).rows).toHaveLength(0);
+},30000);
+it('v1.9 persists strokes, validates payloads, snapshots, CAS, ACL and move undo', async () => {
+ await asUser(owner);
+ const w=await mutate('create_workspace',{name:'Drawing19'}),p=await mutate('create_project',{workspace_id:w.id,name:'Drawing19'});
+ const call=async(op:string,args:Record<string,unknown>)=>(await db.query<{value:{id:string;version:number;x:number;body:string;items:{kind:string}[]}}>('select public.collaborate($1,$2) value',[op,JSON.stringify(args)])).rows[0].value;
+ const stroke={id:crypto.randomUUID(),project_id:p.id,kind:'stroke',version:0,x:20,y:30,color:'#123456',body:JSON.stringify({version:1,width:4,points:[[0,0],[50,60]]})};
+ const saved=await call('board_put',stroke);expect(saved.version).toBe(1);
+ const moved=await call('board_put',{...stroke,version:1,x:100});expect(moved.x).toBe(100);expect(moved.body).toBe(stroke.body);
+ await expect(call('board_put',{...stroke,version:1,x:200})).rejects.toThrow('BOARD_CONFLICT');
+ const restored=await call('board_put',{...stroke,version:2});expect(restored.x).toBe(20);
+ const checkpoint=await call('board_checkpoint',{project_id:p.id,label:'Tratti'});expect(checkpoint.items.some(i=>i.kind==='stroke')).toBe(true);
+ for(const payload of [null,{}, {version:1,width:4,points:[]},{version:1,width:4,points:[[0,"1"]]}, {version:1,width:33,points:[[0,0]]},{version:1,width:2,points:[[0,-1]]},{version:1,width:2,points:Array(129).fill([0,0])}, {version:1,width:1.5,points:[[0,0]]},{version:1,width:2,points:[[0,0.5]]}]) {
+  await expect(call('board_put',{...stroke,id:crypto.randomUUID(),body:JSON.stringify(payload)})).rejects.toThrow('INVALID_DRAWING');
+ }
+ await mutate('create_invite',{project_id:p.id,email:'viewer@test.invalid',role:'viewer',token_hash:'v19viewer'});await asUser(viewer);await mutate('accept_invite',{token_hash:'v19viewer'});
+ expect((await db.query('select kind from public.board_items where id=$1',[stroke.id])).rows).toEqual([{kind:'stroke'}]);
+ await expect(call('board_put',{...stroke,version:3})).rejects.toThrow('FORBIDDEN');
+ await expect(call('board_delete',{...stroke,version:3})).rejects.toThrow('FORBIDDEN');
+ await asUser(outsider);expect((await db.query('select * from public.board_items where id=$1',[stroke.id])).rows).toEqual([]);
+ await expect(call('board_put',{...stroke,id:crypto.randomUUID()})).rejects.toThrow('FORBIDDEN');
+ await asUser(owner);await call('board_delete',{...stroke,version:3});expect((await db.query('select * from public.board_items where id=$1',[stroke.id])).rows).toEqual([]);
 },30000);

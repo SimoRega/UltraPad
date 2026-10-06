@@ -1,7 +1,7 @@
 {
   "name": "ultrapad-desktop",
   "productName": "UltraPad",
-  "version": "1.7.0",
+  "version": "1.9.0",
   "private": true,
   "type": "module",
   "description": "Note, codice e progetti collaborativi sul desktop",

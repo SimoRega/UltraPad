@@ -1,0 +1,15 @@
+# ADR 0011 — Lavagna interattiva 1.9
+
+Accettato per la richiesta del proprietario del 6 ottobre 2026: movimento con mouse e pennello a mano libera. Estende l'ambito della sezione 15 dell'SDD e l'MVP asincrono dell'ADR 0008.
+
+Pointer Events e pointer capture sul canvas gestiscono trascinamento di note, file, gruppi e tratti, anteprima locale e una sola scrittura finale al rilascio. Coordinate intere nello spazio logico della lavagna, trasformate dal rettangolo reale del canvas e dallo zoom: lo scroll non cambia i dati. Escape/pointercancel/perdita della capture annullano il gesto; click sui comandi delle schede e mouse secondario non trascinano. I collegamenti seguono le posizioni durante l'anteprima. I gruppi restano schede organizzative: non trascinano automaticamente i membri.
+
+Persistenza tramite board_put esistente, versione CAS per elemento, permessi editor e letture RLS, quota 200 elementi e 20 checkpoint. Nessun nuovo canale CRDT o promessa di broadcast del gesto: altri utenti vedono la posizione finale con polling ogni 2,5 secondi. Polling sospeso durante gesto/modifica/salvataggio; risposte tardive invalidabili con contatore. Undo usa la versione confermata e fallisce se un collaboratore l'ha modificata.
+
+Migrazione 010 aggiunge kind=stroke. Il body è JSON {version:1,width:1..32,points:[[x,y],...]}, 1–128 punti interi relativi non negativi <=100000, sotto il limite body esistente di 4000 caratteri. Colore e origine nelle colonne esistenti. Trigger con search_path vuoto valida ogni insert/update; non aggiunge grant o bypass ACL. Nessun SVG/HTML utente eseguito: path SVG costruito solo da numeri validati. I tratti lunghi vengono ricampionati preservando primo/ultimo punto; non è un motore grafico a precisione illimitata. Un click genera un punto rotondo. Export JSON/checkpoint conservano il tratto; vista elenco offre anteprima e modifica delle coordinate/colore.
+
+La migrazione corregge anche l'alias b ambiguo rispetto alla variabile PL/pgSQL della RPC board_checkpoint, emerso verificando snapshot con tratti reali. La funzione mantiene tutte le autorizzazioni/CAS precedenti.
+
+Errore di scrittura mantiene anteprima e payload in memoria, con retry esplicito sullo stesso ID/versione o scarto. Un conflitto non viene risolto sovrascrivendo la versione remota. Buffer non durevole dopo chiusura/reload; export lavagna contiene lo stato confermato. Un timeout può avere applicato la RPC: ricaricare/scartare per verificare prima di riprovare in caso di conflitto. Nessuna falsa conferma di salvataggio.
+
+Applicare 010 prima di distribuire il frontend. I vecchi client non visualizzano correttamente stroke: ricaricarli/aggiornarli. Versione web e desktop 1.9.0; cache web v1.9. Nessuna modifica al protocollo Electron o alle sue restrizioni. Verifiche: PGlite sulle migrazioni reali per ACL/CAS/payload/checkpoint/delete; browser reale con metadati API fixture per gesture/zoom/scroll/undo/errori/viewer, oltre a regressioni e integrazione workerd. Questi test non certificano Supabase remoto, OAuth o deploy.
