@@ -1,8 +1,12 @@
-# UltraPad 1.6
+# UltraPad 1.7
+
+Calendari su Markdown e fogli di calcolo con formule e toolbar: [guida 1.7](docs/V1_7.md).
+
+## Versione 1.6 precedente
 
 Nuove funzionalità e attivazione: [guida v1.6](docs/V1_6.md). Applicare le migrazioni 005–009 prima del deploy. Notebook/PDF richiedono il servizio isolato documentato; nessun runtime viene eseguito nel Worker.
 
-# UltraPad
+## Il progetto
 
 Web app collaborativa per note e codice, implementata a partire dall'SDD
 UltraPad. Questo repository sostituisce il prototipo Electron.

@@ -1,3 +1,5 @@
+import Planner from './v17/Planner';
+import Spreadsheet from './v17/Spreadsheet';
 import {useLocation} from 'react-router-dom';
 import {encodeAnchor,decodeAnchor} from './v16/anchors';
 import SaveCenter from './v16/SaveCenter';
@@ -22,10 +24,11 @@ import { toolsFor, insertion, type TextTool } from '../../../packages/presentati
   if (label === 'json') return new JsonWorker(); if (label === 'css') return new CssWorker();
   if (label === 'html') return new HtmlWorker(); if (label === 'typescript' || label === 'javascript') return new TsWorker(); return new EditorWorker();
 } };
-export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged,selectionChanged,jumpSelection }: EditorProps) {
+export default function SourceEditor({ file, userId, role, initialText, initialDelta, clearInitial, clientChanged, localText, localDelta, localChanged, contentChanged,selectionChanged,jumpSelection, visual }: EditorProps & {visual?: 'planner'|'sheet'}) {
   const {search}=useLocation();const {theme}=useTheme(); const toolset=toolsFor(file.name);
   const localRef=useRef(localText);localRef.current=localText;const localChangeRef=useRef(localChanged);localChangeRef.current=localChanged;
   const contentRef=useRef(contentChanged);contentRef.current=contentChanged;
+  const [visualText,setVisualText]=useState(localText??'');
   const [localFailure,setLocalFailure]=useState(false);
   const [client, setClient] = useState<CollaborationClient>(); const [status, setStatus] = useState<SaveStatus>('locale');
   const [pending, setPending] = useState(0); const [error, setError] = useState(''); const [currentRole, setRole] = useState(role);
@@ -60,8 +63,8 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
     const localDoc=new Y.Doc();const localContent=localDoc.getText('content');if(localDelta)localContent.applyDelta(validateRichDelta(localDelta));else localContent.insert(0,localRef.current??'');
     const model=monaco.editor.createModel(localRef.current??'',file.language,monaco.Uri.parse(`ultrapad://files/${file.id}/${file.generation}`));
     const instance=monaco.editor.create(container.current,{model,theme:'vs-dark',readOnly:!canEdit(role),wordWrap:'on',minimap:{enabled:false},fontSize:14,fontFamily:'ui-monospace, SFMono-Regular, Consolas, monospace',padding:{top:24},automaticLayout:true,scrollBeyondLastLine:false,ariaLabel:`Contenuto ${file.name}`});
-    contentRef.current?.(model.getValue());
-    const listener=model.onDidChangeContent(event=>{contentRef.current?.(model.getValue());if(localChangeRef.current)try{localDoc.transact(()=>{for(const change of [...event.changes].sort((a,b)=>b.rangeOffset-a.rangeOffset)){if(change.rangeLength)localContent.delete(change.rangeOffset,change.rangeLength);if(change.text)localContent.insert(change.rangeOffset,change.text);}});localChangeRef.current(model.getValue(),validateRichDelta(localContent.toDelta()));setLocalFailure(false);setError('');}catch(e){setLocalFailure(true);setError(e instanceof Error?e.message:'Copie temporanee non salvate. Scarica il contenuto.');}});
+    contentRef.current?.(model.getValue());setVisualText(model.getValue());
+    const listener=model.onDidChangeContent(event=>{contentRef.current?.(model.getValue());setVisualText(model.getValue());if(localChangeRef.current)try{localDoc.transact(()=>{for(const change of [...event.changes].sort((a,b)=>b.rangeOffset-a.rangeOffset)){if(change.rangeLength)localContent.delete(change.rangeOffset,change.rangeLength);if(change.text)localContent.insert(change.rangeOffset,change.text);}});localChangeRef.current(model.getValue(),validateRichDelta(localContent.toDelta()));setLocalFailure(false);setError('');}catch(e){setLocalFailure(true);setError(e instanceof Error?e.message:'Copie temporanee non salvate. Scarica il contenuto.');}});
     setEditor(instance);
     return ()=>{listener.dispose();instance.dispose();model.dispose();localDoc.destroy();};
   },[file.id,file.generation,file.language,file.name,role]);
@@ -70,6 +73,7 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   useEffect(()=>editor?.updateOptions({readOnly,wordWrap:wrap?'on':'off'}),[editor,readOnly,wrap]);
   useEffect(()=>{if(!client||!editor||!jumpSelection)return;const range=decodeAnchor(client.doc,jumpSelection,file.generation);if(!range){setError('Il passaggio non è più disponibile in questa versione.');return;}const model=editor.getModel();if(!model)return;const a=model.getPositionAt(range.start),b=model.getPositionAt(range.end);editor.setSelection({startLineNumber:a.lineNumber,startColumn:a.column,endLineNumber:b.lineNumber,endColumn:b.column});editor.revealPositionInCenter(a);editor.focus();},[client,editor,jumpSelection]);
   useEffect(()=>{if(!editor)return;const line=Number(new URLSearchParams(search).get('line'));if(Number.isInteger(line)&&line>0){editor.setPosition({lineNumber:line,column:1});editor.revealLineInCenter(line);editor.focus();}},[editor,search]);
+  function replace(start:number,length:number,value:string){if(!editor||readOnly||(!localChanged&&!client))return;const model=editor.getModel();if(!model)return;const a=model.getPositionAt(start),b=model.getPositionAt(start+length);editor.pushUndoStop();editor.executeEdits('visual-editor',[{range:new monaco.Range(a.lineNumber,a.column,b.lineNumber,b.column),text:value,forceMoveMarkers:true}]);editor.pushUndoStop();}
   function insert(tool:TextTool) {
     if(!editor || readOnly)return;const selection=editor.getSelection();const model=editor.getModel();if(!selection||!model)return;
     editor.pushUndoStop();editor.executeEdits('ultrapad-toolbar',[{range:selection,text:insertion(tool,model.getValueInRange(selection)),forceMoveMarkers:true}]);editor.pushUndoStop();editor.focus();
@@ -80,7 +84,7 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
     <div className="editor-toolbar"><span className="badge">{toolset.label}</span><span className="muted">{readOnly ? 'Sola lettura' : 'Modificabile'}</span><span className="spacer" />
       <button onClick={() => setWrap(!wrap)} aria-pressed={wrap}>A capo</button><button onClick={() => editor?.getAction('actions.find')?.run()}>Cerca</button>
       <button onClick={() => download(file.name, editor?.getValue() ?? client?.text ?? '')}>Scarica copia locale</button></div>
-    <div className="format-toolbar" role="toolbar" aria-label={`Strumenti ${toolset.label}`}>
+    <div hidden={Boolean(visual)} className="format-toolbar" role="toolbar" aria-label={`Strumenti ${toolset.label}`}>
       <button disabled={readOnly} onClick={()=>{editor?.trigger('toolbar','undo',null);editor?.focus();}} title="Annulla (Ctrl+Z)">↶ Annulla</button><button disabled={readOnly} onClick={()=>{editor?.trigger('toolbar','redo',null);editor?.focus();}}>↷ Ripeti</button>
       {toolset.tools.map(tool=><button key={tool.label} disabled={readOnly || !editor || (!localChanged && !client)} onClick={()=>insert(tool)}>{tool.label}</button>)}
       {toolset.format && <button disabled={readOnly || !editor} onClick={()=>void format()}>Formatta documento</button>}
@@ -88,7 +92,9 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
       <button disabled={readOnly} onClick={()=>editor?.getAction('editor.action.indentLines')?.run()}>Indenta</button>
     </div>
     {error && <div className="notice" role="alert">{error}</div>}
-    <div className="monaco" ref={container} />
+    <div className={visual?'visual-source-hidden':'monaco'} ref={container} />
+    {visual==='planner'&&<Planner name={file.name} text={visualText} readOnly={readOnly||(!localChanged&&!client)} replace={replace}/>}
+    {visual==='sheet'&&<Spreadsheet name={file.name} text={visualText} readOnly={readOnly||(!localChanged&&!client)} replace={replace}/>}
     <footer className="status-bar"><SaveCenter fileId={file.id} status={status} pending={pending} local={Boolean(localChanged)} error={error} userId={userId} client={client} download={()=>download(file.name,editor?.getValue()??client?.text??'')}/><span role="status" aria-live="polite"><i className={`dot ${status === 'salvato sul server' ? 'saved' : ''}`} />{localChanged ? localFailure?'temporaneo non salvato · scarica una copia':'temporaneo · solo questa scheda':status}{pending > 0 ? ` · ${pending} modifiche in attesa` : ''}</span><span>{localChanged?'Nessuna sincronizzazione':`${people} ${people===1?'sessione':'sessioni'}`} · UTF-8 · LF</span></footer>
   </section>;
 }
