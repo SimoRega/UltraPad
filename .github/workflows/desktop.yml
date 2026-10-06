@@ -1,0 +1,35 @@
+name: Build UltraPad Desktop
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:desktop
+      - run: pnpm desktop:make
+      - run: pnpm test:desktop:e2e
+        env:
+          ULTRAPAD_ELECTRON_EXECUTABLE: ${{ github.workspace }}\apps\desktop\out\UltraPad-win32-x64\UltraPad.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UltraPad-Windows-Installer
+          path: apps/desktop/out/make/squirrel.windows/x64/UltraPad-Setup.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UltraPad-Windows-Portable
+          path: apps/desktop/out/make/zip/win32/x64/*.zip
+          if-no-files-found: error

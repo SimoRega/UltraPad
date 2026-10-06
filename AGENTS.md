@@ -1,5 +1,9 @@
 # UltraPad
 
+Client desktop Electron autorizzato dal proprietario il 6 ottobre 2026,
+ADR 0010 e docs/DESKTOP.md. Mantenere sandbox/isolation e main-frame IPC;
+non aggiungere accesso Node ai renderer o allargare le origini del backend.
+
 Leggi docs/SDD.md, docs/PROGRESS.md e gli ADR prima di modificare il progetto.
 Scope corrente: v1.7 (calendari e fogli testuali, ADR 0009), oltre a v1.6 (issue #5–#22 e ADR 0008), oltre a v1.5 (Google OAuth e ospite locale, ADR 0007), oltre alla v1.3.1 (evolutive issue #1, ADR 0006), oltre alla v1.3 (chiusura tab, temporanei, anteprime, profilo e presenza)
 autorizzato dal proprietario; ADR 0004 anticipa il rich text di M4.

@@ -9,7 +9,7 @@ Nuove funzionalità e attivazione: [guida v1.6](docs/V1_6.md). Applicare le migr
 ## Il progetto
 
 Web app collaborativa per note e codice, implementata a partire dall'SDD
-UltraPad. Questo repository sostituisce il prototipo Electron.
+UltraPad. Il client Electron in apps/desktop riutilizza la stessa web app.
 La cronologia Git precedente è conservata.
 
 **Stato: implementazione R1 da validare in staging, non beta certificata.**
@@ -91,3 +91,9 @@ Non confondere questi test locali con una verifica OAuth sul provider.
 [Login locale / Windows](docs/LOCAL_LOGIN.md) · [Deploy](docs/DEPLOY.md) · [Operazioni e backup](docs/RUNBOOK.md) ·
 [API](docs/API.md) · [Sicurezza](docs/THREAT_MODEL.md) ·
 [Dipendenze](docs/DEPENDENCIES.md) · [SDD integrale](docs/SDD.md)
+# UltraPad Desktop
+
+La versione Electron riutilizza l'interfaccia e i servizi della web app.
+Da sorgenti: `pnpm install --frozen-lockfile` e `pnpm desktop:start`.
+Su Windows, `pnpm desktop:make` genera installer e ZIP in `apps/desktop/out/make/`.
+Configurazione login Google/GitHub e download CI: [docs/DESKTOP.md](docs/DESKTOP.md).

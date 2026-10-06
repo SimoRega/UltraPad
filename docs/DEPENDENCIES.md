@@ -46,3 +46,11 @@ Editor visuale: Quill (BSD-3-Clause), y-quill e quill-cursors (MIT). Versione cu
 ## Audit produzione v1.2
 
 `pnpm audit --prod` rileva 1 advisory low su Quill 2.0.3: GHSA-v3m3-f69x-jf25 / CVE-2025-15056, export HTML, nessuna versione corretta indicata dall’advisory al controllo. UltraPad non chiama `getSemanticHTML()` e non usa l’export HTML di Quill: `richHtml()` valida il delta, limita gli attributi ed escapa titolo/testo. Test di regressione includono payload HTML/eseguibili. Non ignorare globalmente l’advisory; monitorare aggiornamenti. Riferimento: https://github.com/advisories/GHSA-v3m3-f69x-jf25.
+# Dipendenze desktop
+
+Electron 44.5.1, Electron Forge CLI/maker-squirrel/maker-zip 8.0.1, MIT,
+versioni fissate nel workspace e lockfile. Verificate con registry ufficiale
+durante questa implementazione. Electron include Chromium/Node, con licenze
+distribuite dal pacchetto; gli asset frontend mantengono le licenze esistenti.
+Forge e dipendenze build non vengono inclusi nel pacchetto applicativo.
+Riferimenti ufficiali in docs/DESKTOP.md; comandi runtime/build in package.json.

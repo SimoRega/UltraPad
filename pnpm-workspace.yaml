@@ -1,7 +1,10 @@
+nodeLinker: hoisted
 packages:
   - apps/*
   - packages/*
 allowBuilds:
+  electron: true
+  electron-winstaller: true
   esbuild: true
   tesseract.js: false
   workerd: true
