@@ -1,4 +1,4 @@
-import {LatexColors} from './v16/LatexColors';
+import {LatexColors,previewColorMacros} from './v16/LatexColors';
 import {useEffect,useState} from 'react';
 import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
@@ -14,7 +14,7 @@ export async function renderPreview(name:string,text:string){
  if(/\.md$/i.test(name))html=markdown.render(text);
  if(/\.tex$/i.test(name)){
   const {parse,HtmlGenerator}=await import('latex.js');
-  const generator=parse(text.replace(/\\(textcolor|colorbox|definecolor)\b/g,'\\up$1'),{generator:new HtmlGenerator({hyphenate:false,CustomMacros:LatexColors})});
+  const generator=parse(previewColorMacros(text),{generator:new HtmlGenerator({hyphenate:false,CustomMacros:LatexColors})});
   const container=document.createElement('div');container.appendChild(generator.domFragment());html=container.innerHTML;
   css+=await fontStyles();
  }

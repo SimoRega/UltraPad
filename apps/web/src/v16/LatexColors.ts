@@ -52,3 +52,17 @@ export class LatexColors {
     return [node];
   };
 }
+
+export function previewColorMacros(text: string) {
+  // KaTeX already implements color in math; leave those expressions untouched.
+  return text
+    .split(
+      /(\$\$[\s\S]*?\$\$|(?<!\\)\$(?:\\.|[^$])*\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\])/g,
+    )
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part.replace(/\\(textcolor|colorbox|definecolor)\b/g, "\\up$1"),
+    )
+    .join("");
+}
