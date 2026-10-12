@@ -1,4 +1,4 @@
-import type { DragEventHandler } from "react";
+import type { DragEventHandler,MouseEventHandler,KeyboardEventHandler } from "react";
 import FileIcon from "./FileIcon";
 export default function FileTab({
   name,
@@ -8,7 +8,11 @@ export default function FileTab({
   disabled = false,
   drag,
   dragging = false,
+  context,
+  contextKey,
 }: {
+  context?:MouseEventHandler<HTMLSpanElement>;
+  contextKey?:KeyboardEventHandler<HTMLSpanElement>;
   name: string;
   active: boolean;
   select: () => void;
@@ -32,6 +36,8 @@ export default function FileTab({
       onDragOver={drag?.over}
       onDragLeave={drag?.leave}
       onDrop={drag?.drop}
+      onContextMenu={context}
+      onKeyDown={contextKey}
     >
       <button
         className="tab-select"

@@ -101,3 +101,7 @@ La versione Electron riutilizza l'interfaccia e i servizi della web app.
 Da sorgenti: `pnpm install --frozen-lockfile` e `pnpm desktop:start`.
 Su Windows, `pnpm desktop:make` genera installer e ZIP in `apps/desktop/out/make/`.
 Configurazione login Google/GitHub e download CI: [docs/DESKTOP.md](docs/DESKTOP.md).
+
+## Versione 1.12
+
+Explorer ridimensionabile, cartelle collassabili, menu contestuali, breadcrumb completi, palette comandi (Ctrl/⌘ Shift P), editor affiancati, sessioni e import multiplo. I documenti visuali supportano link, immagini incorporate, tabelle e indice. Guida e aggiornamento backend/frontend: [V1_12.md](docs/V1_12.md), [ADR 0015](docs/ADR/0015-v112-editor-shell.md).

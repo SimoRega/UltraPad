@@ -17,6 +17,7 @@ export class CollaborationClient {
   private retry = 0; private reconnectTimer?: ReturnType<typeof setTimeout>; private authTimer?: ReturnType<typeof setTimeout>;
   private queue: Promise<unknown> = Promise.resolve(); private incoming: Promise<unknown> = Promise.resolve();
   private transfers = new Map<string, { parts: Uint8Array[]; total: number; size: number; started: number }>();
+  private listenersAttached=false;
   private sessions = new Map<string, number>(); private persistenceFailed = false;
   constructor(readonly config: { userId: string; fileId: string; generation: number; role: Role; apiUrl: string; ticket: () => Promise<{ ticket: string; generation: number }>; changed: (status: SaveStatus, pending: number, role: Role, error?: string) => void }) {
     this.key = `${config.userId}:${config.fileId}:${config.generation}`;
@@ -42,7 +43,7 @@ export class CollaborationClient {
     } catch { this.persistenceFailed = true; this.notify('errore salvataggio', 'Salvataggio sul dispositivo non disponibile. Esporta il testo prima di chiudere.'); }
     if (this.stopped) return;
     this.doc.on('update', this.onUpdate);
-    this.awareness.on('update', this.onAwareness);
+    this.awareness.on('update', this.onAwareness);this.listenersAttached=true;
     window.addEventListener('offline', this.offline); window.addEventListener('online', this.online);
     this.awareness.setLocalStateField('user', { name: this.config.userId.slice(0, 8), color: '#7c83fd', colorLight: '#7c83fd33' });
     this.ackWatchdog=setInterval(()=>{if([...this.sentAt.values()].some(at=>Date.now()-at>15000))this.ws?.close();},5000);
@@ -171,9 +172,9 @@ export class CollaborationClient {
   get text() { return this.doc.getText('content').toString(); }
   async settled() { await this.queue; }
   async destroy() {
-    this.stopped = true; clearInterval(this.ackWatchdog); clearTimeout(this.authTimer); clearTimeout(this.reconnectTimer); clearTimeout(this.awarenessTimer);
+    if(this.stopped)return;this.stopped = true; clearInterval(this.ackWatchdog); clearTimeout(this.authTimer); clearTimeout(this.reconnectTimer); clearTimeout(this.awarenessTimer);
     window.removeEventListener('offline', this.offline); window.removeEventListener('online', this.online);
-    this.doc.off('update', this.onUpdate); this.awareness.off('update', this.onAwareness); this.ws?.close();
+    if(this.listenersAttached){this.doc.off('update', this.onUpdate);this.awareness.off('update', this.onAwareness);this.listenersAttached=false;} this.ws?.close();
     await this.queue; this.awareness.destroy(); this.doc.destroy(); this.db?.close();
   }
 }

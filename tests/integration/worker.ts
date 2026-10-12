@@ -30,9 +30,11 @@ export default { async fetch(request: Request, env: Env) {
   result=Response.json([{id:'30000000-0000-4000-8000-000000000001',project_id:'20000000-0000-4000-8000-000000000001',workspace_id:'10000000-0000-4000-8000-000000000001',name:'idee.md',kind:'text',parent_id:null,generation:1,language:'markdown',metadata_version:1,status:'ready',theme:'Ricerca',updated_at:'2026-10-05T10:00:00Z',last_modified_by:'00000000-0000-4000-8000-000000000002'}]);
  } else if(/^\/v1\/projects\/.*\/files$/.test(url.pathname)) {
   result=Response.json([{id:'30000000-0000-4000-8000-000000000001',project_id:'20000000-0000-4000-8000-000000000001',workspace_id:'10000000-0000-4000-8000-000000000001',name:'idee.md',kind:'text',parent_id:null,generation:1,language:'markdown',metadata_version:1,status:'ready'}]);
+ } else if(/^\/v1\/files\/.*\/initialize$/.test(url.pathname)) {
+  const body=await request.json<{generation:number;operation_id:string;text:string;delta?:unknown}>();const fileId=url.pathname.split('/')[3];result=await env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:${body.generation}`)).fetch(new Request('https://room/seed',{method:'POST',body:JSON.stringify({fileId,generation:body.generation,text:body.text,delta:body.delta,operationId:body.operation_id})}));
  } else if(/^\/v1\/files\/.*\/collaboration-ticket$/.test(url.pathname)) {
-  const options=await request.json<{document?:boolean}>();const fileId=url.pathname.split('/')[3];const stub=env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`));
-  result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify({fileId,generation:1,token:'editor',document:options.document})}));
+  const options=await request.json<{document?:boolean;documentSchema?:number}>();const fileId=url.pathname.split('/')[3];const stub=env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`));
+  result=await stub.fetch(new Request('https://room/ticket',{method:'POST',body:JSON.stringify({fileId,generation:1,token:'editor',document:options.document,documentSchema:options.documentSchema})}));
  } else if(/^\/v1\/files\/.*\/(presence|snapshot)$/.test(url.pathname)) {
   const fileId=url.pathname.split('/')[3];result=await env.ROOMS.get(env.ROOMS.idFromName(`${fileId}:1`)).fetch(`https://room/${url.pathname.split('/').at(-1)}`);
  } else if(url.pathname.startsWith('/ws/')) {
