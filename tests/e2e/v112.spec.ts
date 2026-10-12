@@ -51,19 +51,19 @@ const base = {
 const records = [
   {
     ...base,
-    id: "30000000-0000-4000-8000-000000000001",
+    id: "31200000-0000-4000-8000-000000000001",
     name: "uno.txt",
     kind: "text",
   },
   {
     ...base,
-    id: "30000000-0000-4000-8000-000000000002",
+    id: "31200000-0000-4000-8000-000000000002",
     name: "due.txt",
     kind: "text",
   },
   {
     ...base,
-    id: "30000000-0000-4000-8000-000000000003",
+    id: "31200000-0000-4000-8000-000000000003",
     name: "Cartella",
     kind: "folder",
   },
@@ -237,7 +237,7 @@ test("v1.12 multi import confirms every source in a real room, even before openi
     const body = r.request().postDataJSON();
     const record = {
       ...base,
-      id: `30000000-0000-4000-8000-${String(next++).padStart(12, "0")}`,
+      id: `31200000-0000-4000-8000-${String(next++).padStart(12, "0")}`,
       name: body.args.name,
       kind: "text",
       language: "markdown",
