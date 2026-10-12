@@ -1,0 +1,224 @@
+/* Shell and editor layout 1.12: component styles, shared spacing and focus states. */
+:root {
+  --ui-gap: 8px;
+  --toolbar-height: 38px;
+  --control-radius: 8px;
+}
+.workspace-shell > .sidebar {
+  width: var(--explorer-width, 260px);
+  position: relative;
+  padding-right: 18px;
+}
+.panel-resizer {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+.panel-resizer:hover,
+.panel-resizer:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  min-width: 0;
+}
+.breadcrumbs > button {
+  padding: 3px 6px;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+}
+.breadcrumbs > :not(:last-child)::after {
+  content: " /";
+  color: var(--muted);
+}
+.breadcrumbs > span {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.file-context-menu {
+  position: fixed;
+  z-index: 100;
+  padding: 6px;
+  min-width: 220px;
+  max-width: calc(100vw - 8px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.file-context-menu button,
+.command-options button {
+  display: block;
+  text-align: left;
+  width: 100%;
+  border: 0;
+  border-radius: var(--control-radius);
+}
+.command-options {
+  max-height: 50vh;
+  overflow: auto;
+  margin-top: 12px;
+}
+.command-options [aria-selected="true"] {
+  background: var(--raised);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.file-panes {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.file-pane {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+.file-pane + .file-pane {
+  border-left: 2px solid var(--border);
+}
+.pane-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.pane-heading select {
+  max-width: 70%;
+  padding: 4px;
+}
+.file-pane > .editor-split {
+  flex: 1;
+  min-height: 0;
+}
+.file-pane .document-scroll {
+  padding: 12px;
+}
+.file-pane .document-paper .ql-editor {
+  padding: 24px;
+}
+.tree-disclosure {
+  border: 0;
+  background: transparent;
+  padding: 4px;
+  min-width: 24px;
+}
+.tree-row .tree-name {
+  min-width: 0;
+}
+.tree-row.context-target {
+  outline: 1px solid var(--accent);
+}
+:is(
+    .editor-commandbar,
+    .rich-format-bar,
+    .editor-toolbar,
+    .planner-toolbar,
+    .sheet-toolbar
+  )
+  button {
+  border-radius: var(--control-radius);
+}
+.document-paper .ql-editor img {
+  max-width: 100%;
+  height: auto;
+}
+.document-paper .ql-editor table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.document-paper .ql-editor td {
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+.document-outline {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  max-height: 180px;
+  overflow: auto;
+  background: var(--surface);
+}
+.document-outline button {
+  display: block;
+  border: 0;
+  background: transparent;
+  padding: 3px 8px;
+  text-align: left;
+  font-size: 12px;
+}
+.rich-insert-form {
+  display: grid;
+  gap: 10px;
+}
+.drop-importing {
+  outline: 3px dashed var(--accent);
+  outline-offset: -5px;
+}
+@media (max-width: 1000px) {
+  .file-panes {
+    flex-direction: column;
+  }
+  .file-pane + .file-pane {
+    border-left: 0;
+    border-top: 2px solid var(--border);
+  }
+  .file-panes:has(.secondary-pane) > .file-pane {
+    flex-basis: 50%;
+    min-height: 180px;
+  }
+}
+@media (max-width: 700px) {
+  .panel-resizer {
+    display: none;
+  }
+  .breadcrumbs {
+    max-width: 100%;
+  }
+  .file-panes:has(.secondary-pane) .document-paper .ql-editor {
+    padding: 16px;
+  }
+  .file-pane .editor-commandbar {
+    overflow: auto;
+    flex-wrap: nowrap;
+  }
+  .pane-heading button {
+    min-height: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+.editor-split .document-paper {
+  max-width: var(--document-width, 900px);
+}
+/* Keep titles and formatting controls usable in narrow split panes. */
+.workspace-heading h2{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workspace-heading>button{flex-shrink:0}
+.file-pane .rich-format-bar{flex-wrap:wrap;overflow:visible;row-gap:4px}
+.file-pane .rich-quick-tools{min-width:0;overflow-x:auto}
+.file-pane .rich-quick-tools input[type=number]{flex:0 0 52px;width:52px}
+.file-pane .rich-quick-tools select{min-width:70px;flex:0 1 110px}

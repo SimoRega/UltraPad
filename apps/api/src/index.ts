@@ -22,7 +22,7 @@ app.use('*', async (c, next) => {
   if (!originAllowed(c.env.APP_ORIGIN,received,c.req.url)) return c.json({ error: 'ORIGIN', expectedOrigin:expected }, 403);
   return cors({ origin: received ?? expected, allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] })(c, next);
 });
-app.use('/v1/*',async(c,next)=>{const maxSize=c.req.path==='/v1/guest-transfer'?8*1024*1024:c.req.path.startsWith('/v1/calderone')?1024*1024:64*1024;return bodyLimit({maxSize,onError:c=>c.json({error:'REQUEST_TOO_LARGE'},413)})(c,next);});
+app.use('/v1/*',async(c,next)=>{const maxSize=(c.req.path==='/v1/guest-transfer'||/^\/v1\/files\/[^/]+\/initialize$/.test(c.req.path))?8*1024*1024:c.req.path.startsWith('/v1/calderone')?1024*1024:64*1024;return bodyLimit({maxSize,onError:c=>c.json({error:'REQUEST_TOO_LARGE'},413)})(c,next);});
 app.get('/maps-preview',async c=>{try{const url=await resolveMapsLink(c.req.query('url')??'');return c.json({url});}catch{return c.json({error:'MAPS_PREVIEW_UNAVAILABLE'},400);}});
 app.get('/health', c => c.json({ service: 'ultrapad', configured: Boolean(c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY) }));
 app.get('/ws/:fileId/:generation', c => {
@@ -123,10 +123,17 @@ app.post('/v1/invitations/accept', async c => {
   const { data, error } = await database(c.env, c.get('token')).rpc('mutate', { op: 'accept_invite', args: { token_hash: await sha256(new TextEncoder().encode(token)) } });
   if (error) throw new Error(error.message); return c.json(data);
 });
+app.post('/v1/files/:id/initialize',async c=>{
+ const fileId=id.parse(c.req.param('id'));const token=c.get('token');const auth=await access(c.env,token,fileId);if(!canEdit(auth.role))return c.json({error:'FORBIDDEN'},403);
+ const args=z.object({generation:z.number().int().positive(),operation_id:id,text:z.string().max(1024*1024),delta:z.unknown().optional()}).parse(await c.req.json());if(auth.file.generation!==args.generation)return c.json({error:'ACCESS_CHANGED'},409);
+ const delta=args.delta===undefined?undefined:validateRichDelta(args.delta);const doc=new Y.Doc();if(delta)doc.getText('content').applyDelta(delta);else doc.getText('content').insert(0,args.text);const text=doc.getText('content').toString();const size=Y.encodeStateAsUpdate(doc).length;doc.destroy();if(text!==args.text)return c.json({error:'SCHEMA'},400);if(size>8*1024*1024||new TextEncoder().encode(text).length>1024*1024)return c.json({error:'QUOTA'},413);
+ const db=database(c.env,token);const {error}=await db.rpc('reserve_document_bytes',{fid:fileId,gen:args.generation,n:size});if(error)throw new Error(error.message);
+ const result=await room(c.env,fileId,args.generation).fetch(new Request('https://room/seed',{method:'POST',body:JSON.stringify({fileId,generation:args.generation,text,delta,operationId:args.operation_id})}));return result;
+});
 app.post('/v1/files/:id/collaboration-ticket', async c => {
   const fileId = id.parse(c.req.param('id')); const auth = await access(c.env, c.get('token'), fileId);
-  const options=z.object({document:z.boolean().optional()}).parse(await c.req.json());if(options.document&&!/\.txt$/i.test(auth.file.name))return c.json({error:'DOCUMENT_TYPE_REQUIRED'},400);
-  return room(c.env, fileId, auth.file.generation).fetch(new Request('https://room/ticket', { method: 'POST', body: JSON.stringify({ token: c.get('token'), fileId, generation: auth.file.generation,document:options.document }) }));
+  const options=z.object({document:z.boolean().optional(),documentSchema:z.literal(2).optional()}).parse(await c.req.json());if(options.document&&!/\.txt$/i.test(auth.file.name))return c.json({error:'DOCUMENT_TYPE_REQUIRED'},400);
+  return room(c.env, fileId, auth.file.generation).fetch(new Request('https://room/ticket', { method: 'POST', body: JSON.stringify({ token: c.get('token'), fileId, generation: auth.file.generation,document:options.document,documentSchema:options.documentSchema }) }));
 });
 app.get('/v1/files/:id/presence', async c => {
   const fileId=id.parse(c.req.param('id'));const {file}=await access(c.env,c.get('token'),fileId);

@@ -58,3 +58,5 @@ it('Maps resolver remains public but rejects arbitrary hosts and wrong origins',
  const denied=await app.fetch(new Request('http://api/maps-preview?url=https%3A%2F%2Fmaps.app.goo.gl%2Fabc',{headers:{Origin:'https://untrusted.invalid'}}),bindings);expect(denied.status).toBe(403);
  const full=await app.fetch(new Request('http://api/maps-preview?url='+encodeURIComponent('https://www.google.com/maps/place/Kyoto'),{headers:{Origin:bindings.APP_ORIGIN}}),bindings);expect(full.status).toBe(200);expect(await full.json()).toEqual({url:'https://www.google.com/maps/place/Kyoto'});
 });
+
+it('v1.12 initialization does not accept unauthenticated imports',async()=>{const response=await app.fetch(new Request('http://api/v1/files/00000000-0000-4000-8000-000000000001/initialize',{method:'POST',headers:{Origin:bindings.APP_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({generation:1,operation_id:'00000000-0000-4000-8000-000000000002',text:'Denied'})}),bindings);expect(response.status).toBe(401);expect(await response.json()).toMatchObject({error:'UNAUTHORIZED'});});

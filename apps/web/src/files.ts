@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { limits, sha256, validateName } from '../../../packages/domain/src/index';
 import type { FileRecord } from '../../../packages/contracts/src/index';
-import { validateRichDelta, documentFile, richHtml, type RichOp } from '../../../packages/rich-text/src/index';
+import { validateRichDelta, plainText, documentFile, richHtml, type RichOp } from '../../../packages/rich-text/src/index';
 import { request } from './api';
 export function download(name: string, content: BlobPart, type = 'text/plain;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([content], { type })); const a = document.createElement('a');
@@ -23,7 +23,7 @@ export async function decodeImport(file:File):Promise<{name:string;text:string;d
   const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer()));
   if(value?.format!=='ultrapad-document'||value.version!==1||typeof value.name!=='string')throw new Error('Documento UltraPad non valido.');
   const delta=validateRichDelta(value.delta);const doc=new Y.Doc();doc.getText('content').applyDelta(delta);const size=Y.encodeStateAsUpdate(doc).length;doc.destroy();if(size>limits.state)throw new Error('QUOTA');
-  return {name:validateName(value.name),text:delta.map(op=>op.insert).join(''),delta};
+  return {name:validateName(value.name),text:plainText(delta),delta};
 }
 export async function exportProject(projectId: string, files: FileRecord[]) {
   const zip = new JSZip();
@@ -39,7 +39,7 @@ export async function exportProject(projectId: string, files: FileRecord[]) {
     const snapshot = await request<{ text: string;delta?:RichOp[]; generation: number; serverSeq: number }>(`/files/${file.id}/snapshot`);
     const bytes = new TextEncoder().encode(snapshot.text);
     zip.file(name, bytes);
-    const documents=[];if(snapshot.delta?.some(op=>Object.keys(op.attributes??{}).length)){for(const [suffix,content] of [['ultrapad.json',documentFile(file.name,snapshot.delta)],['html',richHtml(snapshot.delta,file.name)]]){const documentPath=`documents/${path(file)}.${suffix}`;const documentBytes=new TextEncoder().encode(content);zip.file(documentPath,documentBytes);documents.push({path:documentPath,sha256:await sha256(documentBytes)});}}
+    const documents=[];if(snapshot.delta?.some(op=>typeof op.insert!=='string'||Object.keys(op.attributes??{}).length)){for(const [suffix,content] of [['ultrapad.json',documentFile(file.name,snapshot.delta)],['html',richHtml(snapshot.delta,file.name)]]){const documentPath=`documents/${path(file)}.${suffix}`;const documentBytes=new TextEncoder().encode(content);zip.file(documentPath,documentBytes);documents.push({path:documentPath,sha256:await sha256(documentBytes)});}}
     manifest.files.push({ id: file.id, path: name, kind: file.kind, generation: snapshot.generation, serverSeq: snapshot.serverSeq, sha256: await sha256(bytes), documents });
   }
   zip.file('manifest.json', JSON.stringify(manifest, null, 2));

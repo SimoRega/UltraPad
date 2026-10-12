@@ -1,3 +1,4 @@
+import {requiresVisual} from '../../../packages/rich-text/src/index';
 import ToolMenu from './ToolMenu';
 import TravelPlanner from './v111/TravelPlanner';
 import Planner from './v17/Planner';
@@ -33,6 +34,7 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   const [visualText,setVisualText]=useState(localText??'');
   const [localFailure,setLocalFailure]=useState(false);
   const [client, setClient] = useState<CollaborationClient>(); const [status, setStatus] = useState<SaveStatus>('locale');
+  const [structuredSource,setStructuredSource]=useState(()=>requiresVisual(localDelta??[]));const structuredRef=useRef(structuredSource);
   const [pending, setPending] = useState(0); const [error, setError] = useState(''); const [currentRole, setRole] = useState(role);
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor>(); const container=useRef<HTMLDivElement>(null); const [wrap, setWrap] = useState(true); const [people, setPeople] = useState(1);
   const clearRef = useRef(clearInitial); clearRef.current = clearInitial;
@@ -40,7 +42,7 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   useEffect(() => {
     if(localChanged)return;
     const provider = new CollaborationClient({ userId, fileId: file.id, generation: file.generation, role, apiUrl,
-      ticket: () => request(`/files/${file.id}/collaboration-ticket`, {}),
+      ticket: () => request(`/files/${file.id}/collaboration-ticket`, {documentSchema:2}),
       changed(s, p, r, e) { setStatus(s); setPending(p); setRole(r); if (e) setError(e); }
     });
     let disposed = false;
@@ -56,22 +58,22 @@ export default function SourceEditor({ file, userId, role, initialText, initialD
   useEffect(() => {
     if (!client || !editor) return;
     const model = editor.getModel(); if (!model) return;
-    const binding = new MonacoBinding(client.doc.getText('content'), model, new Set([editor]), client.awareness);
+    const content=client.doc.getText('content');const check=()=>{const structured=requiresVisual(content.toDelta());structuredRef.current=structured;setStructuredSource(structured);if(structured){editor.updateOptions({readOnly:true});setError('Questo documento contiene immagini o tabelle: usa la vista visuale. Il sorgente è in sola lettura.');}};check();content.observe(check);const binding=structuredSource?undefined:new MonacoBinding(content, model, new Set([editor]), client.awareness);
     const selection=editor.onDidChangeCursorSelection(()=>{const model=editor.getModel(),s=editor.getSelection();if(model&&s&&!s.isEmpty())selectionChanged?.(encodeAnchor(client.doc,model.getOffsetAt(s.getStartPosition()),model.getOffsetAt(s.getEndPosition()),file.generation));});
-    return () => {selection.dispose();binding.destroy();};
-  }, [client, editor]);
+    return () => {selection.dispose();content.unobserve(check);binding?.destroy();};
+  }, [client, editor,structuredSource]);
   useEffect(()=>{
     if(!container.current)return;
     const localDoc=new Y.Doc();const localContent=localDoc.getText('content');if(localDelta)localContent.applyDelta(validateRichDelta(localDelta));else localContent.insert(0,localRef.current??'');
     const model=monaco.editor.createModel(localRef.current??'',file.language,monaco.Uri.parse(`ultrapad://files/${file.id}/${file.generation}`));
-    const instance=monaco.editor.create(container.current,{model,theme:'vs-dark',readOnly:!canEdit(role),wordWrap:'on',minimap:{enabled:false},fontSize:14,fontFamily:'ui-monospace, SFMono-Regular, Consolas, monospace',padding:{top:24},automaticLayout:true,scrollBeyondLastLine:false,ariaLabel:`Contenuto ${file.name}`});
+    const instance=monaco.editor.create(container.current,{model,theme:'vs-dark',readOnly:!canEdit(role)||structuredRef.current,wordWrap:'on',minimap:{enabled:false},fontSize:14,fontFamily:'ui-monospace, SFMono-Regular, Consolas, monospace',padding:{top:24},automaticLayout:true,scrollBeyondLastLine:false,ariaLabel:`Contenuto ${file.name}`});
     contentRef.current?.(model.getValue());setVisualText(model.getValue());
-    const listener=model.onDidChangeContent(event=>{contentRef.current?.(model.getValue());setVisualText(model.getValue());if(localChangeRef.current)try{localDoc.transact(()=>{for(const change of [...event.changes].sort((a,b)=>b.rangeOffset-a.rangeOffset)){if(change.rangeLength)localContent.delete(change.rangeOffset,change.rangeLength);if(change.text)localContent.insert(change.rangeOffset,change.text);}});localChangeRef.current(model.getValue(),validateRichDelta(localContent.toDelta()));setLocalFailure(false);setError('');}catch(e){setLocalFailure(true);setError(e instanceof Error?e.message:'Copie temporanee non salvate. Scarica il contenuto.');}});
+    const listener=model.onDidChangeContent(event=>{contentRef.current?.(model.getValue());setVisualText(model.getValue());if(localChangeRef.current&&!structuredRef.current)try{localDoc.transact(()=>{for(const change of [...event.changes].sort((a,b)=>b.rangeOffset-a.rangeOffset)){if(change.rangeLength)localContent.delete(change.rangeOffset,change.rangeLength);if(change.text)localContent.insert(change.rangeOffset,change.text);}});localChangeRef.current(model.getValue(),validateRichDelta(localContent.toDelta()));setLocalFailure(false);setError('');}catch(e){setLocalFailure(true);setError(e instanceof Error?e.message:'Copie temporanee non salvate. Scarica il contenuto.');}});
     setEditor(instance);
     return ()=>{listener.dispose();instance.dispose();model.dispose();localDoc.destroy();};
   },[file.id,file.generation,file.language,file.name,role]);
   useEffect(()=>{monaco.editor.defineTheme('ultrapad',{base:theme.mode==='light'?'vs':'vs-dark',inherit:true,rules:[],colors:{'editor.background':theme.mode==='light'?'#ffffff':'#17191f','editor.selectionBackground':theme.accent+'40','editorCursor.foreground':theme.accent}});monaco.editor.setTheme('ultrapad');},[theme,editor]);
-  const readOnly = !canEdit(currentRole) || status === 'accesso cambiato';
+  const readOnly = !canEdit(currentRole) || status === 'accesso cambiato'||structuredSource;
   useEffect(()=>editor?.updateOptions({readOnly,wordWrap:wrap?'on':'off'}),[editor,readOnly,wrap]);
   useEffect(()=>{if(!client||!editor||!jumpSelection)return;const range=decodeAnchor(client.doc,jumpSelection,file.generation);if(!range){setError('Il passaggio non è più disponibile in questa versione.');return;}const model=editor.getModel();if(!model)return;const a=model.getPositionAt(range.start),b=model.getPositionAt(range.end);editor.setSelection({startLineNumber:a.lineNumber,startColumn:a.column,endLineNumber:b.lineNumber,endColumn:b.column});editor.revealPositionInCenter(a);editor.focus();},[client,editor,jumpSelection]);
   useEffect(()=>{if(!editor)return;const line=Number(new URLSearchParams(search).get('line'));if(Number.isInteger(line)&&line>0){editor.setPosition({lineNumber:line,column:1});editor.revealLineInCenter(line);editor.focus();}},[editor,search]);

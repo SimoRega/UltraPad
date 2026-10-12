@@ -5,6 +5,7 @@ import { Modal } from "../Dialogs";
 import { download } from "../files";
 import {
   validateRichDelta,
+  plainText,
   richHtml,
   type RichOp,
 } from "../../../../packages/rich-text/src/index";
@@ -164,7 +165,7 @@ export default function OfficeImport({
               try {
                 await accept({
                   name: source.name.replace(/\.(docx|rtf)$/i, ".txt"),
-                  text: result.delta.map((r) => r.insert).join(""),
+                  text: plainText(result.delta),
                   delta: result.delta,
                 });
                 close();

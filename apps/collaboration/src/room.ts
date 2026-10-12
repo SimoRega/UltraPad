@@ -1,13 +1,13 @@
 import { profileFor, type Profile } from '../../../packages/profile/src/index';
-import { validateRichDelta, type RichOp } from '../../../packages/rich-text/src/index';
+import { validateRichDelta, requiresVisual, type RichOp } from '../../../packages/rich-text/src/index';
 import { publishCheckpoint } from './backup';
 import { DurableObject } from 'cloudflare:workers';
 import * as Y from 'yjs';
 import { access, database, type Env } from '../../api/src/db';
 import { canEdit, candidate, limits, sha256, type Role } from '../../../packages/domain/src/index';
 import { chunks, frameHeader, join, pack, unpack, type Header } from '../../../packages/contracts/src/index';
-type Lease = { token: string; userId: string; role: Role; fileId: string; generation: number; expiresAt: number; sessionId: string; window: number; count: number };
-type Ticket = { token: string; fileId: string; generation: number; document?:boolean };
+type Lease = { token: string; userId: string; role: Role; fileId: string; generation: number; expiresAt: number; sessionId: string; window: number; count: number;presenceWindow?:number;presenceCount?:number;documentSchema?:number };
+type Ticket = { token: string; fileId: string; generation: number; document?:boolean;documentSchema?:number };
 const roomSchema = `CREATE TABLE IF NOT EXISTS meta(id INTEGER PRIMARY KEY CHECK(id=1),file_id TEXT,generation INTEGER,seq INTEGER,snapshot BLOB,seed_id TEXT);
       CREATE TABLE IF NOT EXISTS receipts(id TEXT PRIMARY KEY,actor TEXT,hash TEXT,seq INTEGER,expires INTEGER);
       CREATE TABLE IF NOT EXISTS tickets(id TEXT PRIMARY KEY,data TEXT,expires INTEGER);
@@ -85,7 +85,7 @@ export class DocumentRoom extends DurableObject<Env> {
       if(url.pathname==='/purge'){for(const ws of this.ctx.getWebSockets())ws.close(4003,'Documento eliminato');await this.ctx.storage.deleteAll();this.ctx.storage.sql.exec(roomSchema);this.doc.destroy();this.doc=new Y.Doc();this.doc.getText('content');this.fileId='';this.generation=1;this.seq=0;return Response.json({ok:true});}
       if (url.pathname === '/ticket') {
         const data = await request.json<Ticket>();const authorization=await this.authorize(data.token, data.fileId, data.generation);
-        this.initialize(data.fileId, data.generation);if(canEdit(authorization.role))this.ctx.waitUntil(this.reportActivity(data.token,this.fileId,this.generation,this.seq).catch(()=>undefined));
+        this.initialize(data.fileId, data.generation);if(requiresVisual(this.doc.getText('content').toDelta())&&data.documentSchema!==2)throw new Error('CLIENT_UPDATE_REQUIRED');if(canEdit(authorization.role))this.ctx.waitUntil(this.reportActivity(data.token,this.fileId,this.generation,this.seq).catch(()=>undefined));
         if(data.document&&canEdit(authorization.role)&&!this.doc.getText('content').toString().endsWith('\n'))await this.prepareDocument(data);
         const ticket = crypto.randomUUID() + crypto.randomUUID();
         this.ctx.storage.sql.exec('INSERT INTO tickets VALUES(?,?,?)', ticket, JSON.stringify(data), Date.now() + 30_000);
@@ -131,6 +131,7 @@ export class DocumentRoom extends DurableObject<Env> {
         const seeded = this.ctx.storage.sql.exec<{ seed_id: string | null }>('SELECT seed_id FROM meta').one().seed_id;
         if (seeded && seeded !== operationId) throw new Error('SEED_CONFLICT');
         if (!seeded) {
+          if(this.ctx.getWebSockets().length)throw new Error('SEED_CONFLICT');
           if(this.seq>0||this.doc.getText('content').length)throw new Error('SEED_CONFLICT');
           const fresh = new Y.Doc();if(delta)fresh.getText('content').applyDelta(validateRichDelta(delta));else fresh.getText('content').insert(0, text);
           const next = candidate(new Y.Doc(), Y.encodeStateAsUpdate(fresh)); fresh.destroy();
@@ -172,8 +173,9 @@ export class DocumentRoom extends DurableObject<Env> {
         const auth = await this.authorize(data.token, data.fileId, data.generation);
         if (lease.userId && lease.userId !== auth.userId) throw new Error('IDENTITY_CHANGED');
         const editors = this.ctx.getWebSockets().filter(s => { const l = s.deserializeAttachment() as Lease; return s !== ws && l.userId && l.expiresAt > now && canEdit(l.role); }).length;
+        if(requiresVisual(this.doc.getText('content').toDelta())&&data.documentSchema!==2)throw new Error('CLIENT_UPDATE_REQUIRED');
         if (canEdit(auth.role) && editors >= limits.editors) throw new Error('ROOM_FULL');
-        lease = { token: data.token, fileId: data.fileId, generation: data.generation, userId: auth.userId, role: auth.role, expiresAt: Math.min(Date.now() + 45_000, auth.expiresAt), sessionId: lease.sessionId, count: 0, window: now };
+        lease = { token: data.token, fileId: data.fileId, generation: data.generation, userId: auth.userId, role: auth.role, expiresAt: Math.min(Date.now() + 45_000, auth.expiresAt), sessionId: lease.sessionId, count: 0, window: now,documentSchema:data.documentSchema };
         ws.serializeAttachment(lease); this.send(ws, { type: 'authenticated', role: lease.role, sessionId: lease.sessionId, userId: lease.userId });
         if (header.type === 'hello') this.sendState(ws);
         await this.ctx.storage.setAlarm(Date.now() + 10_000); return;
@@ -184,6 +186,7 @@ export class DocumentRoom extends DurableObject<Env> {
       if (header.type === 'sync-request') { if (payload.length) throw new Error('SYNC_WRITE_FORBIDDEN'); this.sendState(ws); return; }
       if (header.type === 'awareness') {
         if (payload.length > 4096) throw new Error('AWARENESS_QUOTA');
+        if(!lease.presenceWindow||now-lease.presenceWindow>1000){lease.presenceWindow=now;lease.presenceCount=0;}lease.presenceCount=(lease.presenceCount??0)+1;ws.serializeAttachment(lease);if(lease.presenceCount>20)throw new Error('AWARENESS_RATE_LIMIT');
         this.broadcast({ type: 'awareness', userId: lease.userId, sessionId: lease.sessionId }, payload, ws); return;
       }
       if (!canEdit(lease.role) || header.generation !== this.generation) throw new Error('WRITE_FORBIDDEN');
@@ -207,7 +210,7 @@ export class DocumentRoom extends DurableObject<Env> {
         this.ctx.storage.sql.exec('DELETE FROM pieces WHERE socket=? AND id=?', lease.sessionId, header.updateId);
         this.send(ws, { type: 'ack', updateId: header.updateId, generation: this.generation, serverSeq: receipt.seq }); return;
       }
-      const next = candidate(this.doc, update); const seq = this.seq + 1;
+      const next = candidate(this.doc, update);if(requiresVisual(next.getText('content').toDelta())&&lease.documentSchema!==2){next.destroy();throw new Error('CLIENT_UPDATE_REQUIRED');} const seq = this.seq + 1;
       try {await this.reserveCapacity(lease.token,this.fileId,this.generation,Y.encodeStateAsUpdate(next).length);}catch(e){next.destroy();throw e;}
       try {
         this.ctx.storage.transactionSync(() => {
@@ -218,6 +221,7 @@ export class DocumentRoom extends DurableObject<Env> {
         await this.ctx.storage.sync();
       } catch (e) { next.destroy(); this.ctx.abort('STORAGE_SYNC_FAILED'); throw e; }
       this.doc.destroy(); this.doc = next; this.seq = seq;
+      if(requiresVisual(next.getText('content').toDelta()))for(const socket of this.ctx.getWebSockets()){const attached=socket.deserializeAttachment() as Lease;if(attached.userId&&attached.documentSchema!==2){this.send(socket,{type:'error',code:'CLIENT_UPDATE_REQUIRED'});socket.close(4003,'Aggiorna UltraPad per immagini e tabelle');}}
       await this.ctx.storage.setAlarm(Date.now() + 10_000);
       this.send(ws, { type: 'ack', updateId: header.updateId, generation: this.generation, serverSeq: seq });
       this.ctx.waitUntil(this.reportActivity(lease.token,this.fileId,this.generation,seq).catch(()=>undefined));
